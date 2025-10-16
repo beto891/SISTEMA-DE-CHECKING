@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuários</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/icon.png')}}" type="image/png" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/check.css') }}">
+<!-- Link para o CSS do Bootstrap -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- ✅ Navbar funcional com Bootstrap -->
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-toggle="collapse"
+            data-target="#navbarTogglerDemo01"
+            aria-controls="navbarTogglerDemo01"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <!-- <li class="nav-item"><a class="nav-link text-white" href="#{{ url_for('task.index') }}">Início</a></li> -->
+                <!--<li class="nav-item"><a class="nav-link text-white" href="{{ url_for('task.relatorio') }}">Relatório</a></li>-->
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('campaign.listar_campanhas') }}">Check-in Fotográfico</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('dashboard.dashboard') }}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('user.listar_usuarios') }}">Usuarios</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('admin.dashboard_admin') }}">Painel Admin</a>
+                <li class="nav-item"><a class="nav-link disabled text-white" href="#" tabindex="-1" aria-disabled="true">V1.0</a></li>
+            </ul>
+            <form class="d-flex col-md-auto">
+                <div class="gradient-border w-100">
+                    <input 
+                        class="form-control me-2"
+                        type="search"
+                        placeholder="Pesquisar usuários..."
+                        id="campoBuscaUsuario"
+                        aria-label="Pesquisar"
+                    >
+                </div>
+            </form>
+            <div>
+                <ul class="navbar-nav me-auto mb-1 mb-lg-0">
+                    <li class="nav-item">
+                        <!-- O link agora abre o modal -->
+                        <a class="nav-link text-white" href="#" data-toggle="modal" data-target="#logoutModal">
+                            <img src="{{ url_for('static', filename="img/logout.svg")}}" alt="">Sair
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+  <!-- ✅ Conteúdo principal com container -->
+  <div class="container">
+    <h2 class="mt-4">Usuários</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <a href="{{ url_for('user.novo_usuario') }}" class="btn btn-primary mb-3">➕ Novo Usuário</a>
+
+<div class="table-responsive">
+  <table class="table table-bordered">
+    <thead>
+        <tr><th>ID</th><th>Usuário</th><th>Ações</th></tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>{{ u.username }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('user.excluir_usuario', user_id=u.id) }}"
+                  onsubmit="return confirm('Excluir este usuário?')">
+              <button class="btn btn-danger btn-sm">Excluir</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+  </table>
+</div>
+
+
+<!-- ✅ Modal de logout -->
+  <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="logoutModalLabel">Confirmação de Logout</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Tem certeza que deseja sair?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-dark" data-dismiss="modal">Cancelar</button>
+          <a id="confirmLogout" class="btn btn-danger" href="{{ url_for('auth.logout') }}">Sair</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS (necessário para o modal funcionar) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="{{ url_for('static', filename='js/relatorio.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pesquisar_user.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+body {
+    margin: 0;
+    background-color: #050505 !important;
+    min-height: 100vh;
+    display: flex; /* Transforma o body em um contêiner flex */
+    justify-content: center; /* Centraliza o conteúdo horizontalmente */
+    align-items: center; /* Centraliza o conteúdo verticalmente */
+    position: relative; /* Necessário para posicionar elementos absolutamente dentro dele */
+    /* overflow: hidden; /* Mantenha se você não quer barras de rolagem */
+}
+        img {
+            width: 20%;
+            height: auto;
+            margin-top: 20px;
+        }
+        .text1{
+            color: #f4f3f5;
+        }
+
+        
+
+        .gradient-border-login {
+        border-radius: 50px;
+        padding: 2px; 
+        background: linear-gradient(90deg, #facc15, #f916c0, #a069e9);
+        display: inline-block;
+        }
+        /* Input inside gradient border */
+        .gradient-border-login, input.form-control {
+        border-radius: 50px;
+        height: -10px;
+        margin-bottom: auto;
+        border: none;
+        background-color: #12111f;
+        color: rgb(250, 249, 249);
+        }
+        .gradient-border-login, input.form-control::placeholder {
+        color: #d1d5db;
+        opacity: 1;
+        width: 80%;
+        }
+
+        input.form-control:hover {
+        background-color: #12111f;
+        color: #fffdfd;
+        box-shadow: 0 0 5px #facc15, 0 0 2px #f916c0, 0 0 15px #a069e9;
+        outline: none;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .login-pagina {
+            position: relative;
+            z-index: 2;
+            width: 480px; /* Largura definida para o formulário */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            /* Remover: margin-top: 150px; */
+            /* Remover: margin-right: auto; */
+            /* Remover: margin-left: auto; */
+        }
+        .logo-img {
+            display: block;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: #fcfbf8;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            width: 80%;
+            height: 40px; /* Ajuste conforme necessário */
+            border: 2px solid #facc15; /* Escolha uma cor que combine */
+            border-radius: 50px !important; /* Para seguir o estilo dos inputs */
+            background-color: #12111f;
+            color: #fff;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+    .btn:hover {
+        background-color: #facc15;
+        color: #12111f;
+        box-shadow: 0 0 5px #f916c0, 0 0 2px #a069e9, 0 0 15px #facc15;
+    }
+
+    .roda-pe {
+        margin-top: 20px;
+        color: #e2e1da;
+        font-size: 14px;
+        text-align: center;
+        text-align: center;
+        align-items: center;
+        
+    }
+
+    .copy {
+        width: 1%;
+        display: inline-block;
+        margin: 0 auto;
+        margin-right: 2px;
+        vertical-align: middle;
+        height: auto;
+
+    }
+
+   .container {
+    position: absolute; /* Mantenha absolute */
+    width: 500px !important;
+    height: 500px;
+    top: 50%; /* Centraliza verticalmente */
+    left: 50%; /* Centraliza horizontalmente */
+    transform: translate(-50%, -50%); /* Ajusta a posição para o centro exato */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1; /* Mantenha abaixo do formulário */
+}
+    .container i{
+        position: absolute;
+        inset: -5px;
+        border: 2px solid #fcfbf8;
+        transition: .5s;
+        z-index: 1;
+    }
+
+    .container:hover i {
+    border: 4px solid var(--color);
+    filter: drop-shadow(0 0 20px var(--color));
+    transition: .5s;
+}
+
+    .container i:nth-child(1){
+        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70% ;
+        animation: animar 8s linear infinite;
+    }
+
+    .container i:nth-child(2){
+        border-radius: 66% 34% 42% 58% / 63% 26% 74% 37%;
+        animation: animar 6s linear infinite;
+    }
+
+    .container i:nth-child(3){
+        border-radius: 42% 58% 64% 36% / 41% 42% 58% 59%;
+        animation: animar2 12s linear infinite;
+    }
+
+    @keyframes animar{
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes animar2{
+        0% {
+            transform: rotate(360deg);
+        }
+        100% {
+            transform: rotate(0deg);
+        }
+    }
+    @keyframes gradientMove {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    }

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard - Campanhas</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/icon.png')}}" type="image/png" />
+
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/check.css') }}">
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo01">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('campaign.listar_campanhas') }}">Check-in Fotográfico</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('dashboard.dashboard') }}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('user.listar_usuarios') }}">Usuários</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('admin.dashboard_admin') }}">Painel Admin</a>
+                <li class="nav-item"><a class="nav-link disabled text-white" href="#">V1.0.1</a></li>
+            </ul>
+            <form class="d-flex col-md-auto">
+                <div class="gradient-border w-100">
+                    <input class="form-control me-2" type="search" placeholder="Pesquisar campanhas..." id="campoBuscaCampanha" autocomplete="off"/>
+                    <ul id="sugestoesBusca" class="list-group position-absolute w-100" style="z-index: 1000;"></ul>
+                </div>
+            </form>
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#" data-toggle="modal" data-target="#logoutModal">
+                        <img src="{{ url_for('static', filename='img/logout.svg') }}" alt=""> Sair
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container px-5 mt-5 pt-5">
+    <h2>📊 Percentual de Entrega</h2>
+    <canvas id="graficoCampanhas" height="100"></canvas>
+</div>
+
+<div id="critical-alerts" class="position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 70px;">
+    </div>
+
+<audio id="notificationSound" preload="auto" hidden>
+    <source src="/static/audio/windows_pop_up.mp3" type="audio/mpeg">
+</audio>
+
+
+<div class="container-fluid px-5 mt-4">
+<div class="filtros form-row mb-1 align-items-end">
+    
+    <div class="col-md-auto form-group">
+        <label for="status"><b>Status:</b></label>
+        <select id="status" class="form-control form-control-sm">
+            <option value="todos">Todos</option>
+            <option value="aberto">Meta atingida</option>
+            <option value="fechado">Abaixo da meta</option>
+        </select>
+    </div>
+
+    <!-- <div class="col-md-auto form-group">
+        <label for="data-inicio"><b>Data de Início:</b></label>
+        <input type="date" class="form-control form-control-sm" id="data-inicio">
+    </div>
+
+    <div class="col-md-auto form-group">
+        <label for="data-fim"><b>Data de Fim:</b></label>
+        <input type="date" class="form-control form-control-sm" id="data-fim">
+    </div> -->
+
+</div>
+
+    <h2>📋 Resumo </h2>
+<div class="tabela-scroll">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Campanha</th>
+                <th>Espaços Totais</th>
+                <th>Uploads Recebidos</th>
+                <th>% Coberto</th>
+                <th>Status da Meta</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaCampanhas">
+    {% for r in registros %}
+    <tr>
+        <td>{{ r.campanha }}</td>
+        <td>{{ r.espacos }}</td>
+        <td>{{ r.imagens }}</td>
+        <td>{{ r.percentual }}%</td>
+        <td>
+            {% if r.meta %} ✅ Meta atingida {% else %} ⚠️ Abaixo da meta {% endif %}
+        </td>
+        <td>
+            <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}">
+                <i class="fas fa-file-pdf"></i> Gerar PDF
+            </button>
+            
+            <button class="btn btn-sm btn-dark btn-galeria" 
+                    data-id="{{ r.id }}" 
+                    data-nome="{{ r.campanha }}">
+                <i class="fas fa-images"></i> Galeria
+            </button>
+
+            <div class="dropdown d-inline">
+                <button class="btn btn-sm" type="button" data-toggle="dropdown" style="background: transparent; border: none;">
+                    <i class="fas fa-ellipsis-v text-dark"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <button class="dropdown-item btn-editar-campanha" data-id="{{ r.id }}">
+                        <i class="fas fa-edit mr-2"></i> Editar
+                    </button>
+                    <button class="dropdown-item btn-excluir-campanha" data-id="{{ r.id }}" data-nome="{{ r.campanha }}">
+                        <i class="fas fa-trash mr-"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+    </table>
+</div>
+</div>
+
+<div class="modal fade" id="modalPdfInfo" tabindex="-1" aria-labelledby="modalPdfLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-sm border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalPdfLabel">
+                    <i class="bi bi-file-earmark-pdf-fill me-2"></i> Gerar PDF - Informações da Campanha
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <div class="modal-body px-4 py-3">
+                <form
+                    id="formPdfGeracao"
+                    enctype="multipart/form-data"
+                    method="POST"
+                    action="/gerar-pdf"
+                    target="_blank"
+                >
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="inputPi" class="form-label">Número do PI</label>
+                            <input type="text" class="form-control" id="inputPi" name="pi" placeholder="Ex: 1234-56" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="inputImagem" class="form-label">Relatório de inserção (opcional)</label>
+                        <div class="mb-3">
+                                <div class="input-group">
+                                    <label class="input-group-text btn btn-outline-secondary" for="inputImagem">
+                                        <i class="bi bi-upload me-1"></i> Escolher imagem
+                                    </label>
+                                    <input type="file" class="form-control d-none" id="inputImagem" name="imagemCampanha" accept="image/*">
+                                    <input type="text" class="form-control" id="nomeArquivo" placeholder="Nenhum arquivo selecionado" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="inputInicio" class="form-label">Data de Início</label>
+                            <input type="date" class="form-control" id="inputInicio" name="inicio" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="inputFim" class="form-label">Data Final</label>
+                            <input type="date" class="form-control " id="inputFim" name="fim" required>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="inputCampanha" name="nome">
+                </form>
+            </div>
+
+            <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+    
+                <button type="button" class="btn btn-primary" id="btnGerarPdf">
+                    <i class="fas fa-download mr-1"></i> Gerar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalGaleria" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGaleriaLabel">Galeria</h5> <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                     <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="galeriaTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="tabAtivas" href="#">Uploads</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="tabLixeira" href="#">Lixeira</a>
+                    </li>
+                </ul>
+                <div id="galeriaContainer">
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalConfirmacao" tabindex="-1" aria-labelledby="modalConfirmacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-light">
+                <h5 class="modal-title" id="modalConfirmacaoLabel">Confirmar exclusão</h5>
+                <button type="button" class="btn-close" data-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja mover esta imagem para a lixeira?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoImagem">Sim, mover</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEdicaoCampanha" tabindex="-1" aria-labelledby="modalEdicaoCampanhaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEdicaoCampanhaLabel">Editar Campanha</h5>
+        <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editCampanhaId">
+        
+        <div class="mb-3">
+          <label for="editCampanhaNome" class="form-label">Nome da Campanha</label>
+          <input type="text" class="form-control" id="editCampanhaNome">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+        <button type="button" class="btn btn-dark" id="btnSalvarEdicao">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="confirmacaoExclusaoModal" tabindex="-1" role="dialog" aria-labelledby="confirmacaoExclusaoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="confirmacaoExclusaoModalLabel">Confirmação de Exclusão</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Tem certeza que deseja excluir a campanha **<span id="nomeCampanhaParaExcluir"></span>**?</p>
+        <p>Esta ação não poderá ser desfeita e irá apagar todos os registros relacionados.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoCampanha">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="notificacaoModal" tabindex="-1" role="dialog" aria-labelledby="notificacaoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header" id="notificacaoModalHeader">
+        <h5 class="modal-title" id="notificacaoModalLabel">Notificação</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="notificacaoModalCorpo"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirmação de Logout</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Tem certeza que deseja sair?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-dark" data-dismiss="modal">Cancelar</button>
+                    <a id="confirmLogout" class="btn btn-danger" href="{{ url_for('auth.logout') }}">Sair</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="position-fixed" style="bottom: 20px; right: 20px; z-index: 1060;"></div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pesquisa_dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/func_dashboard.js') }}"></script>
+
+
+<script>
+    const labels = {{ labels | tojson }};
+    const valores = {{ valores | tojson }};
+    const registros = {{ registros | tojson }};
+
+    console.log('Dados de Campanhas Recebidos:', registros);
+
+    // Lógica para o gráfico (mantida inalterada)
+    const campanhasAtivas = valores.filter(v => v >= 10).length;
+    const totalCampanhas = valores.length;
+    new Chart(document.getElementById('graficoCampanhas'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '% de cobertura',
+                data: valores,
+                backgroundColor: valores.map(v => v >= 100 ? '#28a745' : '#dc3545')
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`,
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.raw + '% completo'
+                    }
+                }
+            }
+        }
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Ficheiros de cache do Python
+__pycache__/
+*.pyc
+
+# Ficheiros de ambiente (contêm segredos!)
+.env
+
+# Base de dados local
+database.db
+
+# Ficheiros de configuração do editor de código
+.vscode/
+.idea/
