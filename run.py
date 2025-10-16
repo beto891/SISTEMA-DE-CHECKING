@@ -27,26 +27,6 @@ app.config['DEBUG'] = DEBUG
 #     print(f"🔗 Rota ativa: {rule}")
 
 
-# --- ROTA TEMPORÁRIA PARA CRIAR A BASE DE DADOS ---
-@app.route('/create-tables')
-def create_tables_route():
-    """
-    Rota temporária e secreta para criar as tabelas da base de dados.
-    """
-    secret_key_from_env = os.getenv('SECRET_KEY')
-    secret_key_from_query = request.args.get('secret')
-
-    if not secret_key_from_env or secret_key_from_env != secret_key_from_query:
-        return "Acesso não autorizado.", 403
-
-    try:
-        from app.models import db
-        with app.app_context():
-            db.create_all()
-        return "✅ Tabelas da base de dados criadas com sucesso! PODE E DEVE REMOVER ESTA ROTA AGORA."
-    except Exception as e:
-        return f"❌ Ocorreu um erro ao criar as tabelas: {e}", 500
-
 # (O comando 'create-db' pode ser mantido ou removido, já que não o podemos usar no Render)
 @app.cli.command("create-db")
 def create_db():
