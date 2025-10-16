@@ -60,11 +60,13 @@ def create_admin():
 
 # --- Execução ---
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+
     if ENV == "development":
-        print("✅ Servidor Flask com SocketIO escutando em http://127.0.0.1:5000")
-        socketio.run(app, host="0.0.0.0", port=5000, debug=DEBUG, use_reloader=False)
+        print(f"✅ Dev server em http://127.0.0.1:5000")
+        socketio.run(app, host="0.0.0.0", port=5000,
+                     debug=DEBUG, use_reloader=False)
     else:
-        # Em produção (como no Render), o Gunicorn irá gerir a aplicação,
-        # então o código de produção que você tinha aqui não é necessário
-        # quando se usa o 'Start Command' do Render.
-        print("Aplicação pronta para ser servida pelo Gunicorn.")
+        print(f"🚀 Produção escutando em 0.0.0.0:{port}")
+        socketio.run(app, host="0.0.0.0", port=port,
+                     debug=False, use_reloader=False)
