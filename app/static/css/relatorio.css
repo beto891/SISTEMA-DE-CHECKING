@@ -1,0 +1,143 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: none; /*Permite a barra de rolagem */
+}
+
+body{
+  font-family: Arial, sans-serif;
+  background-color: #585a5c44 !important;
+  
+}
+
+h6, label {
+  color: #353535e1;
+}
+
+a, .nav-link {
+  text-decoration: #ddd;
+}
+
+.gradient-border {
+  border-radius: 50px;
+  padding: 2px; 
+  background: linear-gradient(90deg, #facc15, #f916c0, #a069e9);
+  background-size: 600% 600%;
+  animation: gradientMove 4s ease infinite;
+  display: inline-block;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Input inside gradient border */
+.gradient-border input.form-control {
+  border-radius: 50px;
+  height: -10px;
+  margin-bottom: auto;
+  border: none;
+  background-color: #12111f;
+  color: white;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.gradient-border, input.form-control::placeholder {
+  color: #d1d5db;
+  opacity: 1;
+}
+
+/* Navbar background */
+nav, .navbar {
+  position: fixed;
+  background-color: #12111f !important;
+  position: absolute;
+}
+
+/* Navbar brand and links color */
+.navbar-brand, .navbar-nav .nav-link {
+  color: white !important;
+  font-weight: 500;
+}
+/* Navbar brand hover color */
+.navbar-nav .nav-link.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.navbar-brand, .navbar-nav .nav-link:hover {
+  color: #ed6ff1 !important;
+  /*box-shadow: 0 2px 5px rgb(248, 248, 248);*/
+  text-decoration: none;
+}
+
+table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #000000b9;
+            color: white;
+        }
+
+.texto{
+    margin-left: 30px;
+    font-family: Arial, sans-serif;
+}
+.container-01 {
+    display: flex;
+    justify-content: space-between; /* Distribui os elementos pela largura */
+    align-items: center; /* Alinha verticalmente */
+    gap: 10px; /* Espaçamento entre os itens */
+    padding: 10px;
+}
+
+.filtros {
+    display: flex;
+    gap: 5px; /* Espaço entre os filtros */
+    align-items: center;
+    
+}
+
+.filtro label {
+    display: flex;
+    align-items: center;
+    gap: 1px; /* Espaço entre o rótulo e o campo de entrada */
+    margin: 5px;
+    white-space: nowrap; /* Impede a quebra de linha */
+    text-align: center;
+    min-width: 120px;
+    font-size: 14px;
+}
+
+.exportar, a.exportar {
+    display: flex;
+    align-items:flex-end;
+    margin-left: 1%;
+    margin-top: 7%;
+    white-space: nowrap;
+}
+
+.exportar :hover {
+    cursor: pointer;
+    color: #202020 !important;
+    text-decoration: none;
+}
+
+.marcador {
+    margin-right: 4%;
+    margin-top: 4%;
+}

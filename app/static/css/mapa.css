@@ -1,0 +1,240 @@
+/* Ajustes Globais para Responsividade */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: none;
+}
+
+/* Estilo do corpo da página e HTML */
+body,
+html {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #94969944 !important;
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Estilo para títulos e rótulos */
+h6,
+label {
+    color: #353535e1;
+}
+
+/* Estilo para links e itens de navegação */
+a,
+.nav-link {
+    text-decoration: none;
+}
+
+#notification-container {
+    position: fixed; /* Fixo em relação à janela do navegador */
+    bottom: 20px;    /* Distância de 20px da parte inferior da TELA */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1060;   /* Garante que fique acima de outros elementos */
+    width: auto;
+    min-width: 350px;
+}
+
+.marker-cluster-small {
+    /* (Mantenha qualquer outro estilo que você já tenha para esta classe) */
+    color: white; /* Garante que o número seja branco */
+    font-weight: bold;
+
+    /* ✅ A MÁGICA ACONTECE AQUI: Adiciona um contorno preto de 1px ao texto */
+    text-shadow:
+        -1px -1px 0 #000,  
+         1px -1px 0 #000,
+        -1px  1px 0 #000,
+         1px  1px 0 #000;
+}
+
+/* Borda com gradiente animado */
+.gradient-border {
+    border-radius: 50px;
+    padding: 2px;
+    background: linear-gradient(90deg, #facc15, #f916c0, #a069e9);
+    background-size: 600% 600%;
+    animation: gradientMove 4s ease infinite;
+    display: inline-block;
+}
+
+@keyframes gradientMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Estilo para o campo de busca dentro da borda de gradiente */
+.gradient-border input.form-control {
+    border-radius: 50px;
+    border: none;
+    background-color: #12111f;
+    color: white;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.gradient-border input.form-control::placeholder {
+    color: #d1d5db;
+    opacity: 1;
+}
+
+/* Estilo da barra de navegação */
+nav,
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    background-color: #12111f !important;
+}
+
+.navbar-brand,
+.navbar-nav .nav-link {
+    color: white !important;
+    font-weight: 500;
+}
+
+.navbar-nav .nav-link.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.navbar-brand:hover,
+.navbar-nav .nav-link:hover {
+    color: #ed6ff1 !important;
+    text-decoration: none;
+}
+
+/* Cluster de marcadores com animação */
+.marker-cluster-small {
+    background-color: rgb(255, 140, 0);
+    color: white;
+    animation: pulse 1.5s infinite;
+    border-radius: 50%;
+    border: 3px solid white;
+    width: 80px;
+    height: 80px;
+    text-align: center;
+    line-height: 80px;
+    font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 0 12px rgba(255, 140, 0, 0.6);
+    transition: transform 0.3s ease;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 12px rgba(255, 140, 0, 0.6);
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 0.6;
+        box-shadow: 0 0 20px rgba(255, 140, 0, 0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+        box-shadow: 0 0 12px rgba(255, 140, 0, 0.6);
+    }
+}
+
+/* Estilo do mapa */
+#map {
+    position: fixed;
+    top: 50px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    width: auto;
+    height: auto;
+}
+
+
+/* Botão flutuante */
+.botao-flutuante {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsividade para o botão flutuante em telas menores */
+@media (max-width: 768px) {
+    .botao-flutuante {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}
+
+/* Estilo para as imagens do card */
+.card-img-top {
+    border-radius: 4px;
+}
+
+/* Ajustes para telas menores */
+@media (max-width: 576px) {
+    .container {
+        width: 100% !important;
+        height: 100% !important;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .btn {
+        font-size: 0.85em;
+        padding: 0.35em 0.6em;
+    }
+
+    h2 {
+        font-size: 1.4em;
+    }
+
+    .navbar .form-control {
+        font-size: 0.95em;
+    }
+
+    .card-img-top {
+        max-height: 200px;
+    }
+
+    .card-title {
+        font-size: 0.95em;
+    }
+
+    .card-text {
+        font-size: 0.8em;
+    }
+
+    .btn-danger {
+        font-size: 0.85em;
+        padding: 0.4em 0.6em;
+    }
+}

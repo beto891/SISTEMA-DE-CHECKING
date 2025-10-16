@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ponto mais próximo</title>
+</head>
+<body>
+        <!-- app/templates/ponto.html -->
+        <h2>Ponto mais próximo</h2>
+        <p><strong>{{ campanha['nome'] }}</strong> (ID: {{ campanha['id'] }})</p>
+        <p>Coordenadas: {{ campanha['latitude'] }}, {{ campanha['longitude'] }}</p>
+        <img src="{{ url_for('static', filename='uploads/' + campanha['imagem']) }}" width="250">
+</body>
+</html>

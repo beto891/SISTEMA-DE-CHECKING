@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Cadastro de usuários</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/icon.png') }}" type="image/png">
+
+    <!-- Fonte Awesome -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
+    integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU"
+    crossorigin="anonymous">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+
+    <!-- Link para o CSS do Bootstrap -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+   <div class="container">
+        <i style="--color:#a069e9";></i>
+        <i style="--color:#f916c0";></i>
+        <i style="--color:#facc15";></i>
+        
+    <div class="login-pagina">
+        
+    <img src="{{ url_for('static', filename='img/users(2).svg') }}" alt="Logo" class="logo-img">
+    <h2>Login</h2>
+    <div class="text1"><h6>Preencha os dados de login para acessar</h6></div>
+
+    <div class="form-gradient-container">
+        <form class="w-100" method="POST" action="{{ url_for('auth.login') }}">
+            <div class="gradient-border-login">
+                <input type="text" class="form-control me-2" name="username" placeholder="Usuário" required>
+            </div>
+            <div class="gradient-border-login">
+                <input type="password" class="form-control me-2" name="password" placeholder="Senha" required>
+            </div>
+            <button type="submit" class="btn btn-light">Entrar</button>
+            {% if erro %}
+                <p style="color: red;">{{ erro }}</p>
+            {% endif %}
+        </form>
+        <footer>
+        <div class="roda-pe">
+            <p>
+                <img src="{{ url_for('static', filename='img/copyright_24dp_FFFFFF.svg') }}" class="copy">
+                Desenvolvido por <a href="" target="_blank">E. S. S. soluções e tecnologia</a>
+            </p>
+        </div>
+    </footer>
+    </div>
+    </div>
+
+    </div>
+
+    <footer>
+        <div class="roda-pe">
+            <p>
+                <img src="{{ url_for('static', filename='img/copyright_24dp_FFFFFF.svg') }}" class="copy">
+                Desenvolvido por <a href="" target="_blank">E. S. S. soluções e tecnologia</a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

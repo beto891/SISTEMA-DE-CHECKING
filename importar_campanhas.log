@@ -1,0 +1,235 @@
+2025-07-24 20:27:48,749 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:48,753 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:48,788 [INFO] 127.0.0.1 - - [2025-07-24 20:27:48] "GET /api/campaign/campanhas?arquivo=BASE+DE+DADOS+-+CAMPANHAS_LIVANCE.xlsx HTTP/1.1" 200 10670 0.038750
+2025-07-24 20:27:48,848 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:48,849 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,075 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/css/check.css HTTP/1.1" 304 215 0.226463
+2025-07-24 20:27:49,086 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,088 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,094 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.007546
+2025-07-24 20:27:49,116 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,122 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,126 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/js/script.js HTTP/1.1" 304 217 0.009595
+2025-07-24 20:27:49,201 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,202 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,205 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.003998
+2025-07-24 20:27:49,209 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,210 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,218 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/js/importar-campanha.js HTTP/1.1" 404 363 0.009715
+2025-07-24 20:27:49,219 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,231 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,249 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.028238
+2025-07-24 20:27:49,406 [DEBUG] Initializing WebSocket
+2025-07-24 20:27:49,407 [DEBUG] Validating WebSocket request
+2025-07-24 20:27:49,412 [INFO] 127.0.0.1 - - [2025-07-24 20:27:49] "GET /static/img/icon.png HTTP/1.1" 304 216 0.006546
+2025-07-24 20:28:05,189 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,207 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,221 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /api/campaign/campanhas?arquivo=BASE+DE+DADOS+-+CAMPANHAS_LIVANCE.xlsx HTTP/1.1" 200 10670 0.031683
+2025-07-24 20:28:05,341 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,480 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,554 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/css/check.css HTTP/1.1" 304 215 0.207376
+2025-07-24 20:28:05,569 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,586 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,636 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/js/importar-campanha.js HTTP/1.1" 404 363 0.067290
+2025-07-24 20:28:05,649 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,679 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,689 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.040278
+2025-07-24 20:28:05,692 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,705 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,715 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/js/script.js HTTP/1.1" 304 217 0.023109
+2025-07-24 20:28:05,726 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,733 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,742 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.016077
+2025-07-24 20:28:05,756 [DEBUG] Initializing WebSocket
+2025-07-24 20:28:05,772 [DEBUG] Validating WebSocket request
+2025-07-24 20:28:05,882 [INFO] 127.0.0.1 - - [2025-07-24 20:28:05] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.125717
+2025-07-24 20:33:05,744 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:05,745 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:05,918 [INFO] 127.0.0.1 - - [2025-07-24 20:33:05] "GET /api/campaign/campanhas?arquivo=BASE+DE+DADOS+-+CAMPANHAS_LIVANCE.xlsx HTTP/1.1" 200 10670 0.174039
+2025-07-24 20:33:05,985 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,004 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,343 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/css/check.css HTTP/1.1" 304 215 0.358887
+2025-07-24 20:33:06,354 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,358 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,377 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.023097
+2025-07-24 20:33:06,385 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,389 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,398 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/js/importar_campanha.js HTTP/1.1" 200 2731 0.013083
+2025-07-24 20:33:06,402 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,403 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,410 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.006538
+2025-07-24 20:33:06,415 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,416 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,419 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/js/script.js HTTP/1.1" 304 217 0.004536
+2025-07-24 20:33:06,423 [DEBUG] Initializing WebSocket
+2025-07-24 20:33:06,424 [DEBUG] Validating WebSocket request
+2025-07-24 20:33:06,431 [INFO] 127.0.0.1 - - [2025-07-24 20:33:06] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.007476
+2025-07-24 20:36:45,611 [DEBUG] Initializing WebSocket
+2025-07-24 20:36:45,612 [DEBUG] Validating WebSocket request
+2025-07-24 20:36:45,615 [INFO] 127.0.0.1 - - [2025-07-24 20:36:45] "GET /static/js/importar-campanha.js HTTP/1.1" 404 363 0.004518
+2025-07-24 20:36:45,977 [DEBUG] Initializing WebSocket
+2025-07-24 20:36:45,978 [DEBUG] Validating WebSocket request
+2025-07-24 20:36:45,982 [INFO] 127.0.0.1 - - [2025-07-24 20:36:45] "GET /favicon.ico HTTP/1.1" 404 363 0.005013
+2025-07-24 20:37:13,765 [DEBUG] Initializing WebSocket
+2025-07-24 20:37:13,775 [DEBUG] Validating WebSocket request
+2025-07-24 20:37:13,780 [INFO] 127.0.0.1 - - [2025-07-24 20:37:13] "GET /importar-campanha.js HTTP/1.1" 404 363 0.015111
+2025-07-24 20:37:27,157 [DEBUG] Initializing WebSocket
+2025-07-24 20:37:27,157 [DEBUG] Validating WebSocket request
+2025-07-24 20:37:27,160 [INFO] 127.0.0.1 - - [2025-07-24 20:37:27] "GET /static/importar-campanha.js HTTP/1.1" 404 363 0.002456
+2025-07-24 20:37:33,086 [DEBUG] Initializing WebSocket
+2025-07-24 20:37:33,086 [DEBUG] Validating WebSocket request
+2025-07-24 20:37:33,089 [INFO] 127.0.0.1 - - [2025-07-24 20:37:33] "GET /static/js/importar-campanha.js HTTP/1.1" 404 363 0.002861
+2025-07-24 20:43:34,355 [DEBUG] Initializing WebSocket
+2025-07-24 20:43:34,356 [DEBUG] Validating WebSocket request
+2025-07-24 20:43:34,357 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 20:43:40,013 [INFO] 127.0.0.1 - - [2025-07-24 20:43:40] "POST /api/campaign/importar-campanhas HTTP/1.1" 500 21239 5.657451
+2025-07-24 20:55:52,152 [DEBUG] Initializing WebSocket
+2025-07-24 20:55:52,153 [DEBUG] Validating WebSocket request
+2025-07-24 20:55:52,153 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 20:55:52,158 [INFO] 127.0.0.1 - - [2025-07-24 20:55:52] "POST /api/campaign/importar-campanhas HTTP/1.1" 302 580 0.005936
+2025-07-24 20:55:52,164 [DEBUG] Initializing WebSocket
+2025-07-24 20:55:52,167 [DEBUG] Validating WebSocket request
+2025-07-24 20:55:52,222 [INFO] 127.0.0.1 - - [2025-07-24 20:55:52] "GET /login?next=http://127.0.0.1:5000/api/campaign/importar-campanhas HTTP/1.1" 200 2155 0.060632
+2025-07-24 20:56:00,089 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,114 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,118 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /api/campaign/campanhas?arquivo=BASE+DE+DADOS+-+CAMPANHAS_LIVANCE.xlsx HTTP/1.1" 302 690 0.028682
+2025-07-24 20:56:00,126 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,126 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,132 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /login?next=http://127.0.0.1:5000/api/campaign/campanhas?arquivo%3DBASE%2BDE%2BDADOS%2B-%2BCAMPANHAS_LIVANCE.xlsx HTTP/1.1" 200 2155 0.006552
+2025-07-24 20:56:00,235 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,236 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,623 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /static/css/login.css HTTP/1.1" 304 216 0.388198
+2025-07-24 20:56:00,632 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,633 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,638 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /static/img/copyright_24dp_FFFFFF.svg HTTP/1.1" 304 230 0.005535
+2025-07-24 20:56:00,651 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,657 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,669 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /static/js/script.js HTTP/1.1" 304 217 0.017678
+2025-07-24 20:56:00,672 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,675 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:00,690 [INFO] 127.0.0.1 - - [2025-07-24 20:56:00] "GET /static/img/users(2).svg HTTP/1.1" 304 219 0.017944
+2025-07-24 20:56:00,691 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:00,692 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:01,442 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:01,445 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:01,448 [INFO] 127.0.0.1 - - [2025-07-24 20:56:01] "GET /static/img/icon.png HTTP/1.1" 304 216 0.006555
+2025-07-24 20:56:01,956 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:01,956 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:01,958 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 20:56:02,662 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "POST /login HTTP/1.1" 302 524 0.705807
+2025-07-24 20:56:02,689 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:02,689 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:02,721 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /dashboard HTTP/1.1" 200 11676 0.031886
+2025-07-24 20:56:02,737 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /static/img/noite.mp4 HTTP/1.1" 206 15008127 2.046127
+2025-07-24 20:56:02,809 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:02,809 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:02,822 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /static/css/check.css HTTP/1.1" 304 215 0.014546
+2025-07-24 20:56:02,834 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:02,835 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:02,852 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.017556
+2025-07-24 20:56:02,858 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:02,859 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:02,874 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /static/js/pesquisa_dashboard.js HTTP/1.1" 304 228 0.015913
+2025-07-24 20:56:02,886 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:02,888 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:02,891 [INFO] 127.0.0.1 - - [2025-07-24 20:56:02] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.005016
+2025-07-24 20:56:07,337 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,338 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,368 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /api/campaign/campanhas HTTP/1.1" 200 10670 0.031554
+2025-07-24 20:56:07,400 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,401 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,407 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/css/check.css HTTP/1.1" 304 215 0.007808
+2025-07-24 20:56:07,415 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,418 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,423 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/js/importar_campanha.js HTTP/1.1" 200 2731 0.008525
+2025-07-24 20:56:07,433 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,435 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,450 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.016650
+2025-07-24 20:56:07,454 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,454 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,466 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.012077
+2025-07-24 20:56:07,467 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,468 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,474 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/js/script.js HTTP/1.1" 304 217 0.007079
+2025-07-24 20:56:07,477 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:07,478 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:07,484 [INFO] 127.0.0.1 - - [2025-07-24 20:56:07] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.007513
+2025-07-24 20:56:17,138 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:17,143 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:17,158 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 20:56:18,523 [INFO] 127.0.0.1 - - [2025-07-24 20:56:18] "POST /api/campaign/importar-campanhas HTTP/1.1" 200 299 1.384941
+2025-07-24 20:56:18,532 [DEBUG] Initializing WebSocket
+2025-07-24 20:56:18,533 [DEBUG] Validating WebSocket request
+2025-07-24 20:56:18,781 [INFO] 127.0.0.1 - - [2025-07-24 20:56:18] "GET /api/campaign/mapa HTTP/1.1" 500 35828 0.249283
+2025-07-24 21:04:03,512 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,513 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,538 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /api/campaign/campanhas HTTP/1.1" 200 10670 0.025581
+2025-07-24 21:04:03,610 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,620 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,879 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/css/check.css HTTP/1.1" 304 215 0.267858
+2025-07-24 21:04:03,886 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,887 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,916 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.028851
+2025-07-24 21:04:03,918 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,918 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,930 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.012612
+2025-07-24 21:04:03,935 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,935 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,946 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.011584
+2025-07-24 21:04:03,960 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,964 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,968 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/js/importar_campanha.js HTTP/1.1" 304 227 0.008551
+2025-07-24 21:04:03,977 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:03,980 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:03,982 [INFO] 127.0.0.1 - - [2025-07-24 21:04:03] "GET /static/js/script.js HTTP/1.1" 304 217 0.004998
+2025-07-24 21:04:04,235 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:04,236 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:04,283 [INFO] 127.0.0.1 - - [2025-07-24 21:04:04] "GET /static/img/icon.png HTTP/1.1" 304 216 0.047599
+2025-07-24 21:04:11,615 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:11,615 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:11,616 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 21:04:12,631 [ERROR] Erro ao inserir campanha 1036_TONNIQUE FASHION HAIR - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,633 [ERROR] Erro ao inserir campanha 1111_FD STUDIO - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,636 [ERROR] Erro ao inserir campanha 1154_COSMOPOLISH - MOEMA - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,644 [ERROR] Erro ao inserir campanha 1167_MARIOS CABELEIREIROS - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,646 [ERROR] Erro ao inserir campanha 1254_BARBEARIA MARIOS CABELEIREIROS - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,647 [ERROR] Erro ao inserir campanha 1283_FEEL KING BARBEARIA - MOEMA - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,648 [ERROR] Erro ao inserir campanha 1303_IRAN AVELAR - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,649 [ERROR] Erro ao inserir campanha 1309_THE CAPTAIN'S BARBER SHOP - VILA CLEMENTINO - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,650 [ERROR] Erro ao inserir campanha 1333_BARBEARIA SCANDINAVIAN BARBERSHOP - CAMPO BELO - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,650 [ERROR] Erro ao inserir campanha 1354_BARBEARIA COM NAVALHA - MOEMA - LIVANCE: 6 values for 5 columns
+2025-07-24 21:04:12,665 [INFO] 127.0.0.1 - - [2025-07-24 21:04:12] "POST /api/campaign/importar-campanhas HTTP/1.1" 200 299 1.050335
+2025-07-24 21:04:12,669 [DEBUG] Initializing WebSocket
+2025-07-24 21:04:12,669 [DEBUG] Validating WebSocket request
+2025-07-24 21:04:12,811 [INFO] 127.0.0.1 - - [2025-07-24 21:04:12] "GET /api/campaign/mapa HTTP/1.1" 500 35828 0.141163
+2025-07-24 21:11:56,109 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,114 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,152 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /api/campaign/campanhas HTTP/1.1" 200 10670 0.043042
+2025-07-24 21:11:56,215 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,223 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,456 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/css/check.css HTTP/1.1" 304 215 0.241190
+2025-07-24 21:11:56,463 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,463 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,505 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/js/mapa_buscar.js HTTP/1.1" 304 221 0.042223
+2025-07-24 21:11:56,515 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,517 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,524 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/js/campanhas_map.js HTTP/1.1" 304 222 0.008533
+2025-07-24 21:11:56,540 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,552 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,563 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/js/importar_campanha.js HTTP/1.1" 304 227 0.022613
+2025-07-24 21:11:56,573 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,585 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,623 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/img/logout.svg HTTP/1.1" 304 215 0.049338
+2025-07-24 21:11:56,626 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,626 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,629 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/js/script.js HTTP/1.1" 304 217 0.004294
+2025-07-24 21:11:56,853 [DEBUG] Initializing WebSocket
+2025-07-24 21:11:56,879 [DEBUG] Validating WebSocket request
+2025-07-24 21:11:56,884 [INFO] 127.0.0.1 - - [2025-07-24 21:11:56] "GET /static/img/icon.png HTTP/1.1" 304 216 0.031059
+2025-07-24 21:12:08,377 [DEBUG] Initializing WebSocket
+2025-07-24 21:12:08,377 [DEBUG] Validating WebSocket request
+2025-07-24 21:12:08,378 [DEBUG] Can only upgrade connection if using GET method.
+2025-07-24 21:12:09,457 [INFO] 127.0.0.1 - - [2025-07-24 21:12:09] "POST /api/campaign/importar-campanhas HTTP/1.1" 200 299 1.065989
+2025-07-24 21:12:09,486 [DEBUG] Initializing WebSocket
+2025-07-24 21:12:09,522 [DEBUG] Validating WebSocket request
+2025-07-24 21:12:09,741 [INFO] 127.0.0.1 - - [2025-07-24 21:12:09] "GET /api/campaign/mapa HTTP/1.1" 500 35828 0.255587
