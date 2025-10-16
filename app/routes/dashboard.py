@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from app.utils.database import get_db_connection
 from app.utils.pdf_generator import gerar_pdf_por_nome, gerar_registros_dinamicos_por_campanha
 from app.services.dropbox_service import DropboxService
-from app import db, dashboard_pb
+from app import db, dashboard_bp
 import os
 
 dashboard_bp = Blueprint('dashboard', __name__)
