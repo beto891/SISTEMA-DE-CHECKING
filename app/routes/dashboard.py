@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from app.utils.database import get_db_connection
 from app.utils.pdf_generator import gerar_pdf_por_nome, gerar_registros_dinamicos_por_campanha
 from app.services.dropbox_service import DropboxService
+from app import db, dashboard_pb
 import os
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -22,7 +23,7 @@ def inicio():
 
 @dashboard_bp.route('/dashboard')
 def dashboard():
-    conn = get_db_connection()
+    conn = db.engine.connect()
 
     # ✅ AJUSTE AQUI: Adiciona a coluna 'data_criacao' na consulta
     resultados = conn.execute("""
@@ -31,10 +32,14 @@ def dashboard():
             c.data_criacao,
             MIN(c.id) AS id,
             COUNT(DISTINCT c.cod) AS total_espacos,
-            COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END) AS espacos_com_imagem
+            COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
+                AS espacos_com_imagem
         FROM campanhas c
-        LEFT JOIN campanhas_imagens i ON i.campanha_id = c.id
-        GROUP BY c.nome
+        LEFT JOIN campanhas_imagens i
+        ON i.campanha_id = c.id
+        GROUP BY
+            c.nome,
+            c.data_criacao      -- adiciona aqui
         ORDER BY c.nome
     """).fetchall()
 
