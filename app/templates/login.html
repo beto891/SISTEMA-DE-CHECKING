@@ -29,7 +29,7 @@
     <div class="text1"><h6>Preencha os dados de login para acessar</h6></div>
 
     <div class="form-gradient-container">
-        <form class="w-100" method="POST" action="{{ url_for('auth.login') }}">
+        <form id="login-form" class="w-100" method="POST" action="{{ url_for('auth.login') }}">
             <div class="gradient-border-login">
                 <input type="text" class="form-control me-2" name="username" placeholder="Usuário" required>
             </div>
