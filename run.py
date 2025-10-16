@@ -47,3 +47,10 @@ if __name__ == "__main__":
     else:
         print(f"❌ Ambiente desconhecido: {ENV}")
         
+@app.cli.command("create-db")
+def create_db():
+    """Cria as tabelas da base de dados."""
+    from app.models import db
+    with app.app_context():
+        db.create_all()
+    print("✅ Tabelas da base de dados criadas com sucesso.")
