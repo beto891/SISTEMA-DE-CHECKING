@@ -37,6 +37,27 @@ def create_db():
     print("✅ Tabelas da base de dados criadas com sucesso.")
 
 
+from werkzeug.security import generate_password_hash
+from app.models import db, User
+
+@app.cli.command("create-admin")
+def create_admin():
+    """Cria o utilizador administrador padrão."""
+    # Verifique se o utilizador já existe
+    if User.query.filter_by(username='admin').first():
+        print("Utilizador 'admin' já existe.")
+        return
+
+    # Cria o novo utilizador admin
+    admin_user = User(
+        username='admin',
+        senha=generate_password_hash('beto891', method='pbkdf2:sha256'),
+        is_admin=1
+    )
+    db.session.add(admin_user)
+    db.session.commit()
+    print("✅ Utilizador 'admin' criado com sucesso.")
+
 # --- Execução ---
 if __name__ == "__main__":
     if ENV == "development":
