@@ -5,74 +5,98 @@ from flask import current_app
 import os
 import sys
 
-# Assume que o objeto 'db' do Flask-SQLAlchemy foi inicializado em 'app/__init__.py'
-# e importado aqui (embora 'db' não estivesse no escopo, esta é a estrutura padrão).
-
-# IMPORTANTE: Se o seu 'db' não é um objeto ORM (apenas Flask-SQLAlchemy),
-# você precisará importá-lo do seu módulo de modelos (ex: 'from .models import db').
-# Para esta correção, usarei o db do escopo do Flask-SQLAlchemy.
-
-# Vamos assumir que 'db' é importado globalmente no seu projeto (ex: de app.models)
-# e que 'get_db_connection' não é mais usado para conexões cruas, mas sim
-# 'db.engine.connect()'.
-
-# Se 'db' for o objeto ORM do Flask-SQLAlchemy, o código abaixo deve funcionar,
-# mas se você está usando um modelo de utilitários, precisamos de uma forma de acesso.
-# Para manter a função de utilitário, usarei a forma moderna do Flask-SQLAlchemy:
+# IMPORTANTE: Se 'db' for importado globalmente (ex: de app.models), 
+# as referências abaixo a 'db' serão resolvidas.
+# Vamos assumir que 'db' é importado no módulo principal (app/__init__.py)
 
 def get_db_connection():
     """Retorna uma conexão bruta (DBAPI-style) do SQLAlchemy Engine."""
-    # Como Flask-SQLAlchemy 3.x e SQLAlchemy 2.0+ são usados,
-    # usamos db.engine.connect() para obter uma conexão
+    # O objeto db precisa ser importado aqui para acessar o engine
     from app import db # Importa o objeto db do seu módulo principal
     return db.engine.connect()
+
+def executar_migracao_coluna(conn, table_name, column_name, column_definition):
+    """Executa um ALTER TABLE de forma segura, ignorando erros se a coluna já existir."""
+    try:
+        # Tenta verificar se a coluna já existe no PostgreSQL
+        conn.execute(text(f"SELECT {column_name} FROM {table_name} LIMIT 1"))
+        print(f"🛠️ Coluna '{column_name}' em '{table_name}' já existe.")
+        return False
+    except Exception as e:
+        # Se falhar, tenta executar o ALTER TABLE
+        if "undefined column" in str(e).lower() or "column does not exist" in str(e).lower():
+            # Cria um novo bloco de transação isolado para o ALTER TABLE
+            # Nota: ALTER TABLE é um DDL, e precisa ser feito com cuidado.
+            try:
+                print(f"🛠️ Tentando adicionar coluna '{column_name}' em '{table_name}'...")
+                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"))
+                conn.commit()
+                print(f"🛠️ Coluna '{column_name}' adicionada com sucesso em '{table_name}'.")
+                return True
+            except Exception as e_alter:
+                # Se o ALTER TABLE falhar por algum motivo (ex: a coluna já existia e o SELECT deu falso positivo)
+                conn.rollback() # Limpa o estado da transação
+                print(f"❌ Falha ao adicionar coluna '{column_name}' (provavelmente já existe): {e_alter}")
+                return False
+        else:
+            # Outro erro (Ex: tabela inexistente). Lança o erro.
+            raise e
 
 def inicializar_banco(app):
     """Cria as tabelas e o usuário admin padrão, adaptado para SQLAlchemy Engine."""
     from app import db # Importa o objeto db
     
     with app.app_context():
-        # Usa db.create_all() para o esquema, que é a forma padrão do Flask-SQLAlchemy
-        # para criar todas as tabelas definidas nos modelos.
+        # --- PASSO 1: CRIAÇÃO DO ESQUEMA VIA ORM (Tabelas Base) ---
         try:
             db.create_all()
             print("✅ Tabelas definidas nos modelos criadas com sucesso!")
         except Exception as e:
-            # Em ambientes de produção (PostgreSQL), create_all pode ser substituído por migrações.
-            # Aqui, assume-se que as tabelas são criadas via ORM.
-            print(f"⚠️ Aviso: Falha ao executar db.create_all(). Pode ser que o esquema já exista ou que migrações sejam necessárias: {e}")
+            print(f"⚠️ Aviso: Falha ao executar db.create_all(). Pode ser que o esquema já exista: {e}")
             pass
         
-        # Criação de dados iniciais via SQLAlchemy Engine
+        # --- PASSO 2: CRIAÇÃO DE TABELAS MANUAIS (Sem ORM) ---
         conn = get_db_connection()
         try:
-            # Adiciona coluna 'apagada' à campanhas_imagens, se não existir (Migração)
-            # Nota: O ORM é preferido, mas para migração manual usamos SQL
-            
-            # Checa e adiciona coluna 'apagada' (Para campanhas_imagens)
-            try:
-                conn.execute(text("SELECT apagada FROM campanhas_imagens LIMIT 1"))
-            except Exception: # Coluna não existe (PostgreSQL lança erro de coluna não encontrada)
-                conn.execute(text("ALTER TABLE campanhas_imagens ADD COLUMN apagada INTEGER DEFAULT 0"))
-                print("🛠️ Coluna 'apagada' adicionada em campanhas_imagens.")
-            
-            # Checa e adiciona coluna 'is_admin' (Para usuarios - SQL BRUTO)
-            try:
-                conn.execute(text("SELECT is_admin FROM usuarios LIMIT 1"))
-            except Exception: # Coluna não existe
-                conn.execute(text("ALTER TABLE usuarios ADD COLUMN is_admin INTEGER DEFAULT 0"))
-                print("🛠️ Coluna 'is_admin' adicionada em usuarios.")
+            # Tabela localizacoes_usuarios (NOVA E MANUAL)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS localizacoes_usuarios (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    latitude REAL,
+                    longitude REAL,
+                    timestamp TEXT
+                )
+            """))
+            # Tabela imagens_excluidas (NOVA E MANUAL)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS imagens_excluidas (
+                    id SERIAL PRIMARY KEY,
+                    cod TEXT NOT NULL,
+                    campanha TEXT NOT NULL,
+                    imagem_path TEXT NOT NULL,
+                    excluido_por TEXT NOT NULL,
+                    data_exclusao TEXT NOT NULL
+                )
+            """))
 
+            # --- PASSO 3: MIGRAÇÕES DE COLUNA (ALTER TABLE) ---
+            # O ALTER TABLE é executado dentro de um bloco try/except isolado
+            # usando a função auxiliar para evitar o erro InFailedSqlTransaction.
+            executar_migracao_coluna(conn, 'campanhas_imagens', 'apagada', 'INTEGER DEFAULT 0')
+            executar_migracao_coluna(conn, 'usuarios', 'is_admin', 'INTEGER DEFAULT 0')
+            # Também forçamos a criação de latitude/longitude na tabela campanhas, se necessário
+            executar_migracao_coluna(conn, 'campanhas', 'latitude', 'REAL')
+            executar_migracao_coluna(conn, 'campanhas', 'longitude', 'REAL')
 
-            # Cria usuário admin padrão se não existir (SQL BRUTO)
-            # CORREÇÃO 1: Usando text() e parâmetro nomeado
+            # --- PASSO 4: CRIAÇÃO DE USUÁRIO ADMIN PADRÃO ---
+            # Esta parte deve estar em uma transação limpa
             user_exists = conn.execute(
                 text("SELECT id FROM usuarios WHERE username = :username"), 
                 {"username": "admin"}
             ).fetchone()
 
             if not user_exists:
-                # CORREÇÃO 2: Usando text() e parâmetro nomeado
                 conn.execute(
                     text("INSERT INTO usuarios (username, senha, is_admin) VALUES (:user, :senha, :admin)"),
                     {"user": "admin", "senha": generate_password_hash("beto891"), "admin": 1}
@@ -83,7 +107,8 @@ def inicializar_banco(app):
 
         except Exception as e:
             conn.rollback()
-            print(f"❌ Erro na inicialização de dados: {e}")
+            print(f"❌ Erro grave na inicialização de dados: {e}")
+            # print(f"❌ Traceback: {sys.exc_info()[2]}") # Descomentar para debug detalhado
             
         finally:
             conn.close()
@@ -106,7 +131,11 @@ def buscar_usuario(username):
         ).fetchone()
         return user
     except Exception as e:
-        current_app.logger.error(f"Erro ao buscar usuário: {e}")
+        # Usa current_app.logger.error para registro (se estiver no contexto da aplicação)
+        try:
+            current_app.logger.error(f"Erro ao buscar usuário: {e}")
+        except RuntimeError:
+            print(f"Erro ao buscar usuário (fora de contexto): {e}")
         return None
     finally:
         conn.close()
