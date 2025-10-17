@@ -130,7 +130,7 @@ def upload_foto():
         'mensagem': f"{len(salvos)} de {len(arquivos)} imagem(ns) salvas com sucesso.",
         'arquivos_salvos': salvos,
         'arquivos_com_erro': erros
-    })
+    }), 200
 
 @upload_bp.route('/deletar', methods=['POST'])
 def deletar_imagem():
