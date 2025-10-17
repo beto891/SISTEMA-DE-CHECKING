@@ -1,3 +1,4 @@
+import pandas as pd
 from flask import Blueprint, render_template, session, redirect, url_for, request, send_file, jsonify
 from app.utils.database import get_db_connection # Mantido para funções que o utilizam
 from app.utils.pdf_generator import gerar_pdf_por_nome, gerar_registros_dinamicos_por_campanha
@@ -64,12 +65,18 @@ def dashboard():
 
     conn.close()
 
+    # CORREÇÃO DE TIPAGEM: Converte os objetos Row para dicionários Python para uso posterior.
+    # Isto resolve o TypeError: tuple indices must be integers or slices, not str
+    resultados_dicts = [dict(row._mapping) for row in resultados]
+    espacos_por_campanha_dicts = [dict(row._mapping) for row in espacos_por_campanha]
+    imagens_por_espaco_dicts = [dict(row._mapping) for row in imagens_por_espaco]
+
     espacos_dict = {}
-    for row in espacos_por_campanha:
+    for row in espacos_por_campanha_dicts:
         espacos_dict.setdefault(row["campanha"], []).append(row["espaco_nome"])
 
     imagens_dict = {}
-    for row in imagens_por_espaco:
+    for row in imagens_por_espaco_dicts:
         campanha = row["campanha"]
         espaco = row["espaco"]
         imagem = row["imagem_path"]
@@ -77,7 +84,7 @@ def dashboard():
 
     registros, labels, valores = [], [], []
 
-    for row in resultados:
+    for row in resultados_dicts: # Usa a lista de dicionários corrigida
         campanha = row["campanha"]
         total = row["total_espacos"]
         com_imagem = row["espacos_com_imagem"]
@@ -130,7 +137,6 @@ def report_location():
 
     try:
         # CORREÇÃO 4: Usando text() com parâmetros nomeados.
-        # Substituí get_db_connection() por db.engine.connect() para consistência com /dashboard.
         with db.engine.connect() as conn:
             conn.execute(
                 text("""
@@ -165,7 +171,8 @@ def get_user_locations():
     """)).fetchall()
     conn.close()
 
-    resultados = [dict(row) for row in locations]
+    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário
+    resultados = [dict(row._mapping) for row in locations]
     return jsonify(resultados), 200
 
 @dashboard_bp.route('/api/campanha-imagens')
@@ -185,8 +192,11 @@ def campanha_imagens():
     """), {"nome": nome}).fetchall()
     conn.close()
 
+    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário
+    imagens_dicts = [dict(row._mapping) for row in imagens]
+
     resultado = {}
-    for row in imagens:
+    for row in imagens_dicts:
         espaco = row["espaco"]
         resultado.setdefault(espaco, []).append(row["imagem_path"])
 
@@ -253,8 +263,11 @@ def verificar_imagens(nome):
 
     conn.close()
 
+    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário
+    registros_dicts = [dict(r._mapping) for r in registros]
+
     resultado = []
-    for r in registros:
+    for r in registros_dicts:
         imagem_path = r["imagem_path"]
         cod = r["cod"]
         caminho = imagem_path if imagem_path.startswith("static") else os.path.join("static", imagem_path)
