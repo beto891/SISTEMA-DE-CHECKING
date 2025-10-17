@@ -3,6 +3,7 @@ from app.utils.database import get_db_connection
 from app.utils.pdf_generator import gerar_pdf_por_nome, gerar_registros_dinamicos_por_campanha
 from app.services.dropbox_service import DropboxService
 import os
+from sqlalchemy import text
 
 dashboard_bp = Blueprint('dashboard', __name__)
 dropbox_service = DropboxService()
@@ -25,7 +26,7 @@ def dashboard():
     conn = get_db_connection()
 
     # ✅ AJUSTE AQUI: Adiciona a coluna 'data_criacao' na consulta
-    resultados = conn.execute("""
+    resultados = conn.execute(text("""
         SELECT
             c.nome AS campanha,
             c.data_criacao,
@@ -36,22 +37,22 @@ def dashboard():
         LEFT JOIN campanhas_imagens i ON i.campanha_id = c.id
         GROUP BY c.nome
         ORDER BY c.nome
-    """).fetchall()
+    """)).fetchall()
 
-    espacos_por_campanha = conn.execute("""
+    espacos_por_campanha = conn.execute(text("""
         SELECT c.nome AS campanha, c.cod AS espaco_nome
         FROM campanhas c
         JOIN campanhas_imagens i ON i.campanha_id = c.id
         WHERE i.imagem_path IS NOT NULL
-    """).fetchall()
+    """)).fetchall()
 
-    imagens_por_espaco = conn.execute("""
+    imagens_por_espaco = conn.execute(text("""
         SELECT c.nome AS campanha, c.cod AS espaco, i.imagem_path
         FROM campanhas c
         JOIN campanhas_imagens i ON i.campanha_id = c.id
         WHERE i.imagem_path IS NOT NULL
         ORDER BY c.nome, c.cod, i.id
-    """).fetchall()
+    """)).fetchall()
 
     conn.close()
 
@@ -121,10 +122,10 @@ def report_location():
 
     try:
         conn = get_db_connection()
-        conn.execute("""
+        conn.execute(text("""
             INSERT INTO localizacoes_usuarios (user_id, latitude, longitude, timestamp)
             VALUES (?, ?, ?, ?)
-        """, (user_id, latitude, longitude, timestamp))
+        """, (user_id, latitude, longitude, timestamp)))
         conn.commit()
         conn.close()
         return jsonify(success=True, mensagem="Localização recebida e salva com sucesso"), 200
@@ -138,11 +139,11 @@ def get_user_locations():
     Endpoint para buscar todas as localizações de utilizadores salvas no banco de dados.
     """
     conn = get_db_connection()
-    locations = conn.execute("""
+    locations = conn.execute(text("""
         SELECT user_id, latitude, longitude, timestamp
         FROM localizacoes_usuarios
         ORDER BY timestamp DESC
-    """).fetchall()
+    """)).fetchall()
     conn.close()
 
     resultados = [dict(row) for row in locations]
@@ -155,13 +156,13 @@ def campanha_imagens():
         return jsonify(success=False, mensagem="Campanha não informada"), 400
 
     conn = get_db_connection()
-    imagens = conn.execute("""
+    imagens = conn.execute(text("""
         SELECT c.cod AS espaco, i.imagem_path
         FROM campanhas c
         JOIN campanhas_imagens i ON i.campanha_id = c.id
         WHERE LOWER(c.nome) = LOWER(?)
         ORDER BY c.cod, i.id
-    """, (nome,)).fetchall()
+    """, (nome,))).fetchall()
     conn.close()
 
     resultado = {}
