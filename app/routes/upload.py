@@ -300,7 +300,7 @@ def imagens_ativas():
 
         # Usa a função otimizada para buscar todos os links de uma vez
         paths = [img['imagem_path'] for img in resultados]
-        urls_map = get_shared_links_otimizados([p[0] for p in paths]) # Converte para lista de paths
+        urls_map = get_shared_links_otimizado([p[0] for p in paths]) # Converte para lista de paths
         
         # CORREÇÃO DE TIPAGEM: Usa o ._mapping para construir a lista final
         imagens = [
