@@ -1,6 +1,6 @@
 # --- Monkey-patching (DEVE SER A PRIMEIRA COISA NO FICHEIRO) ---
-import gevent.monkey
-gevent.monkey.patch_all(socket=False)
+# import gevent.monkey
+# gevent.monkey.patch_all(socket=False)
 
 # --- Importações ---
 import os
