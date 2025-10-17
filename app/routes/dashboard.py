@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, send_file, jsonify
-from app.utils.database import get_db_connection
+from app.utils.database import get_db_connection # Mantido para funções que o utilizam
 from app.utils.pdf_generator import gerar_pdf_por_nome, gerar_registros_dinamicos_por_campanha
 from app.services.dropbox_service import DropboxService
-from app import db
+from app import db # Importado para acessar o engine do SQLAlchemy
 import os
-from sqlalchemy import text
+from sqlalchemy import text # Importação obrigatória para SQL puro no SQLAlchemy 2.0+
 
 dashboard_bp = Blueprint('dashboard', __name__)
 dropbox_service = DropboxService()
@@ -24,9 +24,10 @@ def inicio():
 
 @dashboard_bp.route('/dashboard')
 def dashboard():
+    # Usando db.engine.connect() para obter a conexão (Melhor prática com Flask-SQLAlchemy)
     conn = db.engine.connect()
 
-    # ✅ AJUSTE AQUI: Adiciona a coluna 'data_criacao' na consulta
+    # Query 1 (resultados) - JÁ ESTAVA CORRETO
     resultados = conn.execute(text("""
         SELECT
             c.nome AS campanha,
@@ -40,10 +41,11 @@ def dashboard():
         ON i.campanha_id = c.id
         GROUP BY
             c.nome,
-            c.data_criacao      -- adiciona aqui
+            c.data_criacao      -- Correção PostgreSQL: Adicionado ao GROUP BY
         ORDER BY c.nome
     """)).fetchall()
 
+    # Query 2 (espacos_por_campanha) - JÁ ESTAVA CORRETO
     espacos_por_campanha = conn.execute(text("""
         SELECT c.nome AS campanha, c.cod AS espaco_nome
         FROM campanhas c
@@ -51,6 +53,7 @@ def dashboard():
         WHERE i.imagem_path IS NOT NULL
     """)).fetchall()
 
+    # Query 3 (imagens_por_espaco) - JÁ ESTAVA CORRETO
     imagens_por_espaco = conn.execute(text("""
         SELECT c.nome AS campanha, c.cod AS espaco, i.imagem_path
         FROM campanhas c
@@ -126,14 +129,24 @@ def report_location():
         return jsonify(success=False, mensagem="ID do utilizador ausente"), 400
 
     try:
-        conn = get_db_connection()
-        conn.execute("""
-            INSERT INTO localizacoes_usuarios (user_id, latitude, longitude, timestamp)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, latitude, longitude, timestamp))
-        conn.commit()
-        conn.close()
-        return jsonify(success=True, mensagem="Localização recebida e salva com sucesso"), 200
+        # CORREÇÃO 4: Usando text() com parâmetros nomeados.
+        # Substituí get_db_connection() por db.engine.connect() para consistência com /dashboard.
+        with db.engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO localizacoes_usuarios (user_id, latitude, longitude, timestamp)
+                    VALUES (:user_id, :latitude, :longitude, :timestamp)
+                """), 
+                {
+                    "user_id": user_id, 
+                    "latitude": latitude, 
+                    "longitude": longitude, 
+                    "timestamp": timestamp
+                }
+            )
+            # Para DML (INSERT/UPDATE/DELETE) com engine.connect(), é necessário um commit.
+            conn.commit()
+            return jsonify(success=True, mensagem="Localização recebida e salva com sucesso"), 200
     except Exception as e:
         print(f"Erro ao salvar localização: {e}")
         return jsonify(success=False, mensagem=f"Erro interno do servidor: {str(e)}"), 500
@@ -143,7 +156,8 @@ def get_user_locations():
     """
     Endpoint para buscar todas as localizações de utilizadores salvas no banco de dados.
     """
-    conn = get_db_connection()
+    conn = db.engine.connect() # Padronizando para db.engine.connect()
+    # Query 5 (SELECT) - JÁ ESTAVA CORRETO
     locations = conn.execute(text("""
         SELECT user_id, latitude, longitude, timestamp
         FROM localizacoes_usuarios
@@ -160,14 +174,15 @@ def campanha_imagens():
     if not nome:
         return jsonify(success=False, mensagem="Campanha não informada"), 400
 
-    conn = get_db_connection()
+    conn = db.engine.connect() # Padronizando para db.engine.connect()
+    # CORREÇÃO 6: Usando text() com parâmetro nomeado :nome, corrigindo o erro de parâmetro posicional (?)
     imagens = conn.execute(text("""
         SELECT c.cod AS espaco, i.imagem_path
         FROM campanhas c
         JOIN campanhas_imagens i ON i.campanha_id = c.id
-        WHERE LOWER(c.nome) = LOWER(?)
+        WHERE LOWER(c.nome) = LOWER(:nome)
         ORDER BY c.cod, i.id
-    """, (nome,))).fetchall()
+    """), {"nome": nome}).fetchall()
     conn.close()
 
     resultado = {}
@@ -177,46 +192,14 @@ def campanha_imagens():
 
     return jsonify(success=True, campanha=nome, imagens_por_espaco=resultado)
 
-# @dashboard_bp.route('/api/upload/imagens')
-# def api_upload_imagens():
-#     campanha_id = request.args.get("campanha_id")
-#     if not campanha_id:
-#         return jsonify(success=False, mensagem="ID da campanha não informado"), 400
-
-#     conn = get_db_connection()
-#     campanha_row = conn.execute("SELECT nome FROM campanhas WHERE id = ?", (campanha_id,)).fetchone()
-#     if not campanha_row:
-#         conn.close()
-#         return jsonify(success=False, mensagem="Campanha não encontrada"), 404
-
-#     nome_campanha = campanha_row["nome"]
-
-#     imagens = conn.execute("""
-#         SELECT c.cod AS espaco, i.imagem_path
-#         FROM campanhas c
-#         JOIN campanhas_imagens i ON i.campanha_id = c.id
-#         WHERE LOWER(c.nome) = LOWER(?)
-#         ORDER BY c.cod, i.id
-#     """, (nome_campanha,)).fetchall()
-#     conn.close()
-
-#     resultado = []
-#     for row in imagens:
-#         link_publico = gerar_link_publico(row["imagem_path"])
-#         resultado.append({
-#             "espaco": row["espaco"],
-#             "url": link_publico or row["imagem_path"],
-#             "path": row["imagem_path"]
-#         })
-
-#     return jsonify(success=True, imagens=resultado)
+# O trecho @dashboard_bp.route('/api/upload/imagens') estava comentado e foi mantido assim.
 
 @dashboard_bp.route('/gerar-pdf', methods=["POST"])
 def gerar_pdf_campanha_post():
-    nome  = request.form.get("nome")
-    pi    = request.form.get("pi")
-    inicio = request.form.get("inicio")
-    fim    = request.form.get("fim")
+    nome    = request.form.get("nome")
+    pi      = request.form.get("pi")
+    inicio  = request.form.get("inicio")
+    fim     = request.form.get("fim")
 
     imagem = request.files.get("imagemCampanha")  # ✅ imagem enviada via FormData
 
@@ -258,16 +241,16 @@ def gerar_pdf_campanha_get(nome):
 
 @dashboard_bp.route('/verificar-imagens-campanha/<nome>')
 def verificar_imagens(nome):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
+    conn = db.engine.connect() # Padronizando para db.engine.connect()
+    
+    # CORREÇÃO 7: Substitui conn.cursor().execute(SQL_bruto) por conn.execute(text())
+    registros = conn.execute(text("""
         SELECT c.cod, i.imagem_path
         FROM campanhas c
         JOIN campanhas_imagens i ON i.campanha_id = c.id
-        WHERE LOWER(c.nome) LIKE ?
-    """, (f"%{nome.lower()}%",))
-    registros = cursor.fetchall()
+        WHERE LOWER(c.nome) LIKE :nome_like
+    """), {"nome_like": f"%{nome.lower()}%"}).fetchall()
+
     conn.close()
 
     resultado = []
@@ -288,15 +271,22 @@ def verificar_imagens(nome):
 
 @dashboard_bp.route('/api/campanha/<int:id_campanha>', methods=['DELETE'])
 def excluir_campanha_api(id_campanha):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = db.engine.connect() # Padronizando para db.engine.connect()
 
     try:
+        # CORREÇÃO 8: Substitui conn.cursor().execute(SQL_bruto) por conn.execute(text())
+        
         # Passo 1: Excluir todos os espaços relacionados a esta campanha
-        cursor.execute("DELETE FROM espacos WHERE id_campanha = ?", (id_campanha,))
+        conn.execute(
+            text("DELETE FROM espacos WHERE id_campanha = :id"), 
+            {"id": id_campanha}
+        )
 
         # Passo 2: Excluir a própria campanha
-        cursor.execute("DELETE FROM campanhas WHERE id = ?", (id_campanha,))
+        cursor_campanha = conn.execute(
+            text("DELETE FROM campanhas WHERE id = :id"), 
+            {"id": id_campanha}
+        )
         
         conn.commit()
         return jsonify({"success": True, "message": "Campanha e todos os espaços relacionados foram excluídos com sucesso."}), 200

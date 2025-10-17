@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# NOVO: Importa a função de inicialização de DB para criar tabelas e admin
+from .utils.database import inicializar_banco
+
 # --- INSTÂNCIAS GLOBAIS ---
 from .models import db, User
 login_manager = LoginManager()
@@ -53,8 +56,11 @@ def create_app():
     socketio.init_app(app)
     login_manager.init_app(app)
 
-    # --- REGISTRO DE BLUEPRINTS E EVENTOS ---
+    # --- REGISTRO DE BLUEPRINTS, EVENTOS E INICIALIZAÇÃO DO DB ---
     with app.app_context():
+        # CHAMADA CRÍTICA ADICIONADA: Inicializa as tabelas no PostgreSQL/SQLite e cria o admin
+        inicializar_banco(app)
+        
         # Importa as blueprints
         from .routes.auth import auth
         from .routes.task import task_bp

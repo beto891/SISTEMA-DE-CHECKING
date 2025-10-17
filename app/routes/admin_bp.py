@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from app.utils.database import get_db_connection
 from app.routes.auth import admin_required
+from sqlalchemy import text
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -8,7 +9,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 @admin_required
 def dashboard_admin():
     conn = get_db_connection()
-    resultados = conn.execute("""
+    resultados = conn.execute(text("""
         SELECT
             c.nome AS campanha,
             COUNT(DISTINCT c.id) AS total_espacos,
@@ -16,7 +17,7 @@ def dashboard_admin():
         FROM campanhas c
         LEFT JOIN campanhas_imagens i ON i.campanha_id = c.id
         GROUP BY c.nome
-    """).fetchall()
+    """)).fetchall()
 
     registros = []
     labels = []

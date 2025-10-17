@@ -11,6 +11,7 @@ import requests
 from flask import current_app
 from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
+from sqlalchemy import text # NOVO: Importação necessária para o SQLAlchemy 2.0
 
 # 🔐 Instancia única do serviço Dropbox
 dropbox_service = DropboxService()
@@ -48,11 +49,12 @@ def buscar_localizacao(lat, lng):
     except Exception as e:
         print(f"⚠️ Erro ao buscar localização: {e}")
     return None, None
+
 def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
     conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
+    
+    # CORREÇÃO: Usando text() e parâmetro nomeado para compatibilidade com SQLAlchemy 2.0 e PostgreSQL
+    rows = conn.execute(text("""
         SELECT
             c.id,
             c.cod,
@@ -63,10 +65,11 @@ def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
         FROM campanhas AS c
         LEFT JOIN campanhas_imagens AS i
         ON i.campanha_id = c.id
-        WHERE LOWER(c.nome) LIKE ?
-    """, (f"%{nome_campanha.lower()}%",))
+        WHERE LOWER(c.nome) LIKE :nome_campanha
+    """), {"nome_campanha": f"%{nome_campanha.lower()}%"}).fetchall()
+    
+    conn.close()
 
-    rows = cursor.fetchall()
     agrup = {}
 
     for id_, cod, nome, lat, lng, img in rows:
@@ -105,6 +108,8 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
                 resp = requests.get(path, stream=True, timeout=5)
                 if resp.status_code == 200:
                     return ImageReader(resp.raw)
+                else:
+                    return None
             else:
                 abs_path = os.path.join(current_app.root_path, "static", path)
                 if os.path.exists(abs_path):
@@ -146,7 +151,7 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
         for x in (x_esq, x_dir):
             d = Drawing(largura, altura)
             r = Rect(x, y_pos, faixa_largura, faixa_altura, rx=raio, ry=raio,
-                     fillColor=magenta, strokeWidth=0, strokeColor=None)
+                      fillColor=magenta, strokeWidth=0, strokeColor=None)
             d.add(r)
             renderPDF.draw(d, c, 0, 0)
 
@@ -270,7 +275,7 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
 
     c.setFont("Helvetica", 12)
     c.setFillColorRGB(0.2, 0.2, 0.2)
-    c.drawCentredString(largura / 2, altura / 2 - 1.5 * cm, "contato@bdrops.tv   |   bdrops.tv   |   (11) 3078-0879")
+    c.drawCentredString(largura / 2, altura / 2 - 1.5 * cm, "contato@bdrops.tv   |   bdrops.tv   |   (11) 3078-0879")
 
     c.showPage()
     c.save()

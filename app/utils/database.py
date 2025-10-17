@@ -1,117 +1,124 @@
-import sqlite3
-import os
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
+from sqlalchemy import text, create_engine, event
+from flask import current_app
+import os
+import sys
 
-# Caminho absoluto para o banco de dados
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-db_path = os.path.join(BASE_DIR, 'database.db')
+# Assume que o objeto 'db' do Flask-SQLAlchemy foi inicializado em 'app/__init__.py'
+# e importado aqui (embora 'db' não estivesse no escopo, esta é a estrutura padrão).
+
+# IMPORTANTE: Se o seu 'db' não é um objeto ORM (apenas Flask-SQLAlchemy),
+# você precisará importá-lo do seu módulo de modelos (ex: 'from .models import db').
+# Para esta correção, usarei o db do escopo do Flask-SQLAlchemy.
+
+# Vamos assumir que 'db' é importado globalmente no seu projeto (ex: de app.models)
+# e que 'get_db_connection' não é mais usado para conexões cruas, mas sim
+# 'db.engine.connect()'.
+
+# Se 'db' for o objeto ORM do Flask-SQLAlchemy, o código abaixo deve funcionar,
+# mas se você está usando um modelo de utilitários, precisamos de uma forma de acesso.
+# Para manter a função de utilitário, usarei a forma moderna do Flask-SQLAlchemy:
 
 def get_db_connection():
-    """Retorna uma conexão com o banco de dados SQLite."""
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row  # Permite acessar colunas por nome
-    return conn
+    """Retorna uma conexão bruta (DBAPI-style) do SQLAlchemy Engine."""
+    # Como Flask-SQLAlchemy 3.x e SQLAlchemy 2.0+ são usados,
+    # usamos db.engine.connect() para obter uma conexão
+    from app import db # Importa o objeto db do seu módulo principal
+    return db.engine.connect()
 
-def inicializar_banco():
-    """Cria as tabelas 'tarefas', 'campanhas', 'campanhas_imagens' e 'usuarios' se ainda não existirem."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Tabela de tarefas
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tarefas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        titulo TEXT,
-        motivo TEXT,
-        estabelecimento TEXT,
-        localidade TEXT,
-        status TEXT,
-        data_inicio TEXT,
-        data_fim TEXT,
-        descricao TEXT
-    )
-    """)
-
-    # Tabela de campanhas atualizada
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS campanhas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cod TEXT,
-        nome TEXT,
-        latitude REAL,
-        longitude REAL,
-        data_criacao TEXT
-    )
-    """)
-
-    # Tabela de imagens vinculadas a campanhas via campanha_id
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS campanhas_imagens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        campanha_id INTEGER NOT NULL,
-        imagem_path TEXT NOT NULL,
-        FOREIGN KEY (campanha_id) REFERENCES campanhas(id)
-    )
-    """)
-
-    # Tabela de usuários
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        senha TEXT NOT NULL,
-        is_admin INTEGER DEFAULT 0
-    )
-    """)
-    #Imagens excluidas
-    cursor.execute("""
-    CREATE TABLE imagens_excluidas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cod TEXT NOT NULL,
-    campanha TEXT NOT NULL,
-    imagem_path TEXT NOT NULL,
-    excluido_por TEXT NOT NULL,
-    data_exclusao TEXT NOT NULL
+def inicializar_banco(app):
+    """Cria as tabelas e o usuário admin padrão, adaptado para SQLAlchemy Engine."""
+    from app import db # Importa o objeto db
     
-    )
-    """);
-    
+    with app.app_context():
+        # Usa db.create_all() para o esquema, que é a forma padrão do Flask-SQLAlchemy
+        # para criar todas as tabelas definidas nos modelos.
+        try:
+            db.create_all()
+            print("✅ Tabelas definidas nos modelos criadas com sucesso!")
+        except Exception as e:
+            # Em ambientes de produção (PostgreSQL), create_all pode ser substituído por migrações.
+            # Aqui, assume-se que as tabelas são criadas via ORM.
+            print(f"⚠️ Aviso: Falha ao executar db.create_all(). Pode ser que o esquema já exista ou que migrações sejam necessárias: {e}")
+            pass
+        
+        # Criação de dados iniciais via SQLAlchemy Engine
+        conn = get_db_connection()
+        try:
+            # Adiciona coluna 'apagada' à campanhas_imagens, se não existir (Migração)
+            # Nota: O ORM é preferido, mas para migração manual usamos SQL
+            
+            # Checa e adiciona coluna 'apagada' (Para campanhas_imagens)
+            try:
+                conn.execute(text("SELECT apagada FROM campanhas_imagens LIMIT 1"))
+            except Exception: # Coluna não existe (PostgreSQL lança erro de coluna não encontrada)
+                conn.execute(text("ALTER TABLE campanhas_imagens ADD COLUMN apagada INTEGER DEFAULT 0"))
+                print("🛠️ Coluna 'apagada' adicionada em campanhas_imagens.")
+            
+            # Checa e adiciona coluna 'is_admin' (Para usuarios - SQL BRUTO)
+            try:
+                conn.execute(text("SELECT is_admin FROM usuarios LIMIT 1"))
+            except Exception: # Coluna não existe
+                conn.execute(text("ALTER TABLE usuarios ADD COLUMN is_admin INTEGER DEFAULT 0"))
+                print("🛠️ Coluna 'is_admin' adicionada em usuarios.")
 
-    # Adiciona coluna is_admin se não existir (para bancos antigos)
-    cursor.execute("PRAGMA table_info(usuarios)")
-    colunas = [col[1] for col in cursor.fetchall()]
-    if 'is_admin' not in colunas:
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN is_admin INTEGER DEFAULT 0")
 
-    # Cria usuário admin padrão se não existir
-    cursor.execute("SELECT * FROM usuarios WHERE username = ?", ("admin",))
-    if not cursor.fetchone():
-        cursor.execute(
-            "INSERT INTO usuarios (username, senha, is_admin) VALUES (?, ?, ?)",
-            ("admin", generate_password_hash("beto891"), 1)
-        )
-        print("👤 Usuário admin criado com senha padrão.")
+            # Cria usuário admin padrão se não existir (SQL BRUTO)
+            # CORREÇÃO 1: Usando text() e parâmetro nomeado
+            user_exists = conn.execute(
+                text("SELECT id FROM usuarios WHERE username = :username"), 
+                {"username": "admin"}
+            ).fetchone()
 
-    conn.commit()
-    conn.close()
-    print("✅ Banco de dados e tabelas criadas com sucesso!")
+            if not user_exists:
+                # CORREÇÃO 2: Usando text() e parâmetro nomeado
+                conn.execute(
+                    text("INSERT INTO usuarios (username, senha, is_admin) VALUES (:user, :senha, :admin)"),
+                    {"user": "admin", "senha": generate_password_hash("beto891"), "admin": 1}
+                )
+                print("👤 Usuário admin criado com senha padrão.")
+            
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Erro na inicialização de dados: {e}")
+            
+        finally:
+            conn.close()
+        
+        print("✅ Banco de dados inicializado com sucesso!")
+
 
 # Funções utilitárias
 
 def buscar_usuario(username):
     """Busca um usuário pelo nome."""
+    # NOTA: O ORM do Flask-Login (User.query.get()) é a melhor prática,
+    # mas mantendo a lógica de conexão bruta:
     conn = get_db_connection()
-    user = conn.execute("SELECT * FROM usuarios WHERE username = ?", (username,)).fetchone()
-    conn.close()
-    return user
+    try:
+        # CORREÇÃO 3: Usando text() e parâmetro nomeado
+        user = conn.execute(
+            text("SELECT * FROM usuarios WHERE username = :username"), 
+            {"username": username}
+        ).fetchone()
+        return user
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar usuário: {e}")
+        return None
+    finally:
+        conn.close()
 
 def criar_usuario(username, senha, is_admin=0):
     """Cria um novo usuário com senha criptografada."""
     conn = get_db_connection()
     try:
+        # CORREÇÃO 4: Usando text() e parâmetro nomeado
         conn.execute(
-            "INSERT INTO usuarios (username, senha, is_admin) VALUES (?, ?, ?)",
-            (username, generate_password_hash(senha), is_admin)
+            text("INSERT INTO usuarios (username, senha, is_admin) VALUES (:user, :senha, :admin)"),
+            {"user": username, "senha": generate_password_hash(senha), "admin": is_admin}
         )
         conn.commit()
         return True

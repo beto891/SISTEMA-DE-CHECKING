@@ -9,6 +9,9 @@ from datetime import datetime
 import logging
 import sys
 
+# Importação NECESSÁRIA para corrigir o erro ObjectNotExecutableError
+from sqlalchemy import text # <<-- NOVO
+
 # Importações ajustadas para o sistema de login e socketio
 from flask_login import login_required
 from app import socketio
@@ -31,9 +34,6 @@ def to_float(valor):
         return None
 
 # --- ROTA UNIFICADA PARA AÇÕES POR ID (GET, PUT, DELETE) ---
-# Esta função única resolve o conflito de rotas e o bug de edição.
-
-# Em app/routes/campaign.py
 
 @campaign_bp.route('/<int:item_id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
@@ -43,7 +43,6 @@ def handle_campaign_item(item_id):
     """
     
     if request.method == 'PUT':
-        # (Remova os prints de 'espião' agora que encontramos o problema)
         data = request.get_json()
         if not data or 'novo_nome' not in data:
             return jsonify(success=False, mensagem="Dados de entrada inválidos."), 400
@@ -54,16 +53,18 @@ def handle_campaign_item(item_id):
                 # --- LÓGICA DE ATUALIZAÇÃO CORRIGIDA ---
 
                 # 1. Primeiro, usamos o ID para encontrar o NOME ANTIGO da campanha.
-                row = conn.execute("SELECT nome FROM campanhas WHERE id = ?", (item_id,)).fetchone()
+                # CORREÇÃO 1: Usando text() e marcador nomeado :id
+                row = conn.execute(text("SELECT nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
                 if not row:
                     return jsonify(success=False, mensagem="Campanha original não encontrada."), 404
                 
                 nome_antigo = row['nome']
 
                 # 2. Agora, atualizamos TODAS as linhas que têm o nome antigo.
+                # CORREÇÃO 2: Usando text() e marcadores nomeados
                 cursor = conn.execute(
-                    "UPDATE campanhas SET nome = ? WHERE nome = ?", 
-                    (novo_nome, nome_antigo)
+                    text("UPDATE campanhas SET nome = :novo_nome WHERE nome = :nome_antigo"), 
+                    {"novo_nome": novo_nome, "nome_antigo": nome_antigo}
                 )
 
                 if cursor.rowcount == 0:
@@ -75,29 +76,41 @@ def handle_campaign_item(item_id):
             current_app.logger.error(f"Erro ao atualizar campanha: {e}")
             return jsonify(success=False, mensagem="Erro ao processar a atualização."), 500
 
-   
+    
     # --- LÓGICA PARA EXCLUIR (DELETE) ---
     if request.method == 'DELETE':
         try:
             with get_db_connection() as conn:
                 # PASSO 1: Encontrar o nome da campanha a partir do ID do espaço
-                row = conn.execute("SELECT nome FROM campanhas WHERE id = ?", (item_id,)).fetchone()
+                # CORREÇÃO 3: Usando text() e marcador nomeado :id
+                row = conn.execute(text("SELECT nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
                 if not row:
                     return jsonify(success=False, mensagem="Espaço da campanha não encontrado."), 404
                 
                 nome_da_campanha = row['nome']
 
                 # PASSO 2: Encontrar todos os IDs dos espaços dessa campanha
-                ids_cursor = conn.execute("SELECT id FROM campanhas WHERE nome = ?", (nome_da_campanha,))
+                # CORREÇÃO 4: Usando text() e marcador nomeado :nome
+                ids_cursor = conn.execute(text("SELECT id FROM campanhas WHERE nome = :nome"), {"nome": nome_da_campanha})
                 ids_para_excluir = [r['id'] for r in ids_cursor.fetchall()]
 
                 if not ids_para_excluir:
                     return jsonify(success=False, mensagem="Nenhum espaço encontrado para esta campanha."), 404
 
                 # PASSO 3 & 4: Excluir imagens e depois os espaços
-                placeholders = ','.join(['?'] * len(ids_para_excluir))
-                conn.execute(f"DELETE FROM campanhas_imagens WHERE campanha_id IN ({placeholders})", ids_para_excluir)
-                cursor_campanha = conn.execute("DELETE FROM campanhas WHERE nome = ?", (nome_da_campanha,))
+                # NOTA: Usamos a sintaxe SQL dinâmico para a cláusula IN, mas garantimos o text()
+                placeholders = ','.join([f":id{i}" for i, _ in enumerate(ids_para_excluir)])
+                
+                # Criamos um dicionário de parâmetros nomeados para a cláusula IN
+                params_in = {f"id{i}": id_val for i, id_val in enumerate(ids_para_excluir)}
+                
+                conn.execute(
+                    text(f"DELETE FROM campanhas_imagens WHERE campanha_id IN ({placeholders})"), 
+                    params_in
+                )
+                
+                # CORREÇÃO 5: Usando text() e marcador nomeado :nome
+                cursor_campanha = conn.execute(text("DELETE FROM campanhas WHERE nome = :nome"), {"nome": nome_da_campanha})
                 
                 conn.commit()
                 return jsonify(
@@ -111,7 +124,8 @@ def handle_campaign_item(item_id):
     # --- LÓGICA PARA BUSCAR (GET) ---
     # (Default: if request.method == 'GET')
     with get_db_connection() as conn:
-        campanha = conn.execute("SELECT id, nome FROM campanhas WHERE id = ?", (item_id,)).fetchone()
+        # CORREÇÃO 6: Usando text() e marcador nomeado :id
+        campanha = conn.execute(text("SELECT id, nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
     if not campanha:
         return jsonify(success=False, mensagem="Campanha não encontrada."), 404
     return jsonify(dict(campanha))
@@ -126,7 +140,8 @@ def ponto_proximo():
     user_lon = float(request.form['lon'])
 
     conn = get_db_connection()
-    campanhas = conn.execute("SELECT * FROM campanhas").fetchall()
+    # CORREÇÃO 7: Usando text()
+    campanhas = conn.execute(text("SELECT * FROM campanhas")).fetchall()
     conn.close()
 
     if not campanhas:
@@ -144,13 +159,15 @@ def ponto_proximo():
 @login_required
 def listar_campanhas():
     conn = get_db_connection()
-    campanhas = conn.execute("SELECT * FROM campanhas").fetchall()
+    # CORREÇÃO 8: Usando text()
+    campanhas = conn.execute(text("SELECT * FROM campanhas")).fetchall()
     campanhas_data = []
     for c in campanhas:
         camp = dict(c)
+        # CORREÇÃO 9: Usando text() e marcador nomeado :campanha_id
         img_row = conn.execute(
-            "SELECT imagem_path FROM campanhas_imagens WHERE campanha_id = ? LIMIT 1",
-            (c['id'],)
+            text("SELECT imagem_path FROM campanhas_imagens WHERE campanha_id = :campanha_id LIMIT 1"),
+            {"campanha_id": c['id']}
         ).fetchone()
         if img_row:
             camp['imagem_url'] = url_for(
@@ -187,7 +204,8 @@ def importar_campanhas():
 
     df.columns = [col.strip().lower() for col in df.columns]
     conn = get_db_connection()
-    cursor = conn.cursor()
+    # Removemos o conn.cursor() e passamos a usar conn.execute(text()) para compatibilidade com SQLAlchemy 2.0 e PostgreSQL.
+    
     ignoradas = 0
     criadas = 0
     novas = []
@@ -204,20 +222,27 @@ def importar_campanhas():
         lon = to_float(row.get('longitude'))
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        cursor.execute("SELECT id FROM campanhas WHERE LOWER(cod) = ? AND LOWER(nome) = ?", (cod.lower(), nome.lower()))
-        if cursor.fetchone():
+        # CORREÇÃO 10: Usando conn.execute(text()) com marcadores nomeados
+        existe = conn.execute(
+            text("SELECT id FROM campanhas WHERE LOWER(cod) = :cod AND LOWER(nome) = :nome"), 
+            {"cod": cod.lower(), "nome": nome.lower()}
+        ).fetchone()
+
+        if existe:
             ignoradas += 1
             continue
 
         try:
-            cursor.execute(
-                "INSERT INTO campanhas (cod, nome, latitude, longitude, data_criacao) VALUES (?, ?, ?, ?, ?)",
-                (cod, nome, lat, lon, ts)
+            # CORREÇÃO 11: Usando conn.execute(text()) com marcadores nomeados
+            conn.execute(
+                text("INSERT INTO campanhas (cod, nome, latitude, longitude, data_criacao) VALUES (:cod, :nome, :lat, :lon, :ts)"),
+                {"cod": cod, "nome": nome, "lat": lat, "lon": lon, "ts": ts}
             )
             criadas += 1
             novas.append({"cod": cod, "nome": nome, "latitude": lat, "longitude": lon})
         except Exception as e:
             logger.error(f"❌ Erro ao inserir campanha {cod} - {nome}: {e}")
+            conn.rollback() # Adicionado rollback em caso de falha
             ignoradas += 1
             continue
 
@@ -240,11 +265,12 @@ def importar_campanhas():
 @login_required
 def mapa_dados():
     conn = get_db_connection()
-    pontos = conn.execute("""
+    # CORREÇÃO 12: Usando text()
+    pontos = conn.execute(text("""
         SELECT id, cod, nome, latitude, longitude
         FROM campanhas
         WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-    """).fetchall()
+    """)).fetchall()
     conn.close()
     dados_mapa = [dict(p) for p in pontos]
     return jsonify(dados_mapa)

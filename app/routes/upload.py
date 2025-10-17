@@ -1,5 +1,5 @@
 # Arquivo: app/routes/upload_bp.py
-# Versão 5.1: Versão revisada e ajustada para robustez.
+# Versão 5.1: Versão revisada e ajustada para robustez e compatibilidade com SQLAlchemy 2.0 e PostgreSQL.
 
 import os
 import unicodedata
@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 import dropbox
+from sqlalchemy import text # <<-- NOVO: Obrigatório para SQL puro no SQLAlchemy 2.0+
 
 # --- Configuração do Blueprint ---
 upload_bp = Blueprint('upload', __name__, url_prefix='/api/upload')
@@ -51,15 +52,19 @@ def slug(texto: str) -> str:
 
 def get_campaign_from_image_path(conn, imagem_path: str) -> dict | None:
     """Encontra os detalhes da campanha associada a um caminho de imagem."""
+    # CORREÇÃO 1: Usando text() e parâmetro nomeado
     resultado = conn.execute(
-        "SELECT campanha_id FROM campanhas_imagens WHERE imagem_path = ?", (imagem_path,)
+        text("SELECT campanha_id FROM campanhas_imagens WHERE imagem_path = :path"), 
+        {"path": imagem_path}
     ).fetchone()
 
     if not resultado:
         return None
     
+    # CORREÇÃO 2: Usando text() e parâmetro nomeado
     campanha = conn.execute(
-        "SELECT id, cod, nome FROM campanhas WHERE id = ?", (resultado['campanha_id'],)
+        text("SELECT id, cod, nome FROM campanhas WHERE id = :id"), 
+        {"id": resultado['campanha_id']}
     ).fetchone()
     
     return dict(campanha) if campanha else None
@@ -77,8 +82,10 @@ def upload_foto():
         return jsonify(success=False, mensagem="O código, o nome da campanha e ao menos uma imagem são obrigatórios."), 400
 
     with get_db_connection() as conn:
+        # CORREÇÃO 3: Usando text() e parâmetros nomeados
         campanha = conn.execute(
-            "SELECT id, cod, nome FROM campanhas WHERE cod = ? AND nome = ?", (campanha_cod, campanha_nome)
+            text("SELECT id, cod, nome FROM campanhas WHERE cod = :cod AND nome = :nome"), 
+            {"cod": campanha_cod, "nome": campanha_nome}
         ).fetchone()
         
         if not campanha:
@@ -104,9 +111,10 @@ def upload_foto():
                 file_content = arq.read()
                 dropbox.upload_file(file_content, remote_path)
 
+                # CORREÇÃO 4: Usando text() e parâmetros nomeados
                 conn.execute(
-                    "INSERT INTO campanhas_imagens (campanha_id, imagem_path) VALUES (?, ?)",
-                    (campanha_id, remote_path)
+                    text("INSERT INTO campanhas_imagens (campanha_id, imagem_path) VALUES (:campanha_id, :path)"),
+                    {"campanha_id": campanha_id, "path": remote_path}
                 )
                 salvos.append(fn_seguro)
             except Exception as e:
@@ -139,9 +147,10 @@ def deletar_imagem():
 
         # Atualiza o banco de dados
         with get_db_connection() as conn:
+            # CORREÇÃO 5: Usando text() e parâmetros nomeados
             cursor = conn.execute(
-                "UPDATE campanhas_imagens SET apagada = 1, imagem_path = ? WHERE imagem_path = ?",
-                (path_lixeira, imagem_path)
+                text("UPDATE campanhas_imagens SET apagada = 1, imagem_path = :lixeira WHERE imagem_path = :path"),
+                {"lixeira": path_lixeira, "path": imagem_path}
             )
             # Se a atualização falhar no DB, desfaz a ação no Dropbox
             if cursor.rowcount == 0:
@@ -173,9 +182,10 @@ def restaurar_imagem():
             
             dropbox.move_file(imagem_path_lixeira, path_original)
             
+            # CORREÇÃO 6: Usando text() e parâmetros nomeados
             cursor = conn.execute(
-                "UPDATE campanhas_imagens SET apagada = 0, imagem_path = ? WHERE imagem_path = ?",
-                (path_original, imagem_path_lixeira)
+                text("UPDATE campanhas_imagens SET apagada = 0, imagem_path = :original WHERE imagem_path = :lixeira"),
+                {"original": path_original, "lixeira": imagem_path_lixeira}
             )
             if cursor.rowcount == 0:
                 dropbox.move_file(path_original, imagem_path_lixeira)
@@ -201,7 +211,8 @@ def excluir_definitivo():
 
         # ✅ AJUSTE: Se a exclusão no Dropbox for bem-sucedida, remove do banco de dados
         with get_db_connection() as conn:
-            cursor = conn.execute("DELETE FROM campanhas_imagens WHERE imagem_path = ?", (imagem_path,))
+            # CORREÇÃO 7: Usando text() e parâmetro nomeado
+            cursor = conn.execute(text("DELETE FROM campanhas_imagens WHERE imagem_path = :path"), {"path": imagem_path})
             if cursor.rowcount == 0:
                 # Se não encontrar no banco, mas já excluiu no Dropbox, isso é uma falha
                 # de consistência, mas o arquivo já foi excluído. Retornamos sucesso.
@@ -212,10 +223,11 @@ def excluir_definitivo():
     except dropbox.exceptions.ApiError as e:
         # Se o arquivo não existe no Dropbox, podemos assumir que já foi excluído.
         if "path/not_found/" in str(e):
-             with get_db_connection() as conn:
-                cursor = conn.execute("DELETE FROM campanhas_imagens WHERE imagem_path = ?", (imagem_path,))
+              with get_db_connection() as conn:
+                # CORREÇÃO 8: Usando text() e parâmetro nomeado
+                cursor = conn.execute(text("DELETE FROM campanhas_imagens WHERE imagem_path = :path"), {"path": imagem_path})
                 conn.commit()
-             return jsonify(success=True, mensagem="Imagem já havia sido excluída do Dropbox. Registro removido do banco."), 200
+              return jsonify(success=True, mensagem="Imagem já havia sido excluída do Dropbox. Registro removido do banco."), 200
         current_app.logger.error(f"Falha na exclusão definitiva do Dropbox: {e}")
         return jsonify(success=False, mensagem="Erro na exclusão do arquivo no Dropbox."), 500
     except Exception as e:
@@ -247,7 +259,7 @@ def get_shared_links_otimizado(paths):
                     if links:
                         return path.lower(), links[0].url
                 except Exception as e_inner:
-                     current_app.logger.error(f"Falha ao buscar link já existente para {path}: {e_inner}")
+                    current_app.logger.error(f"Falha ao buscar link já existente para {path}: {e_inner}")
             
             # Para qualquer outro erro, registramos e retornamos um link de fallback.
             current_app.logger.warning(f"Não foi possível criar/obter link para {path}: {e}")
@@ -263,10 +275,6 @@ def get_shared_links_otimizado(paths):
     return urls
 
 # <<< VERSÃO CORRIGIDA DA ROTA /imagens >>>
-# <<< SUBSTITUA A SUA FUNÇÃO 'imagens_ativas' POR ESTA >>>
-
-# Em app/routes/upload.py
-
 @upload_bp.route('/imagens', methods=['GET'])
 @login_required
 def imagens_ativas():
@@ -277,10 +285,11 @@ def imagens_ativas():
 
     try:
         with get_db_connection() as conn:
-            resultados = conn.execute("""
+            # CORREÇÃO 9: Usando text() e parâmetro nomeado
+            resultados = conn.execute(text("""
                 SELECT id, imagem_path FROM campanhas_imagens
-                WHERE apagada = 0 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = ?)
-            """, (nome_campanha,)).fetchall()
+                WHERE apagada = 0 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
+            """), {"nome": nome_campanha}).fetchall()
 
         # Usa a função otimizada para buscar todos os links de uma vez
         paths = [img['imagem_path'] for img in resultados]
@@ -307,10 +316,11 @@ def imagens_lixeira():
 
     try:
         with get_db_connection() as conn:
-            resultados = conn.execute("""
+            # CORREÇÃO 10: Usando text() e parâmetro nomeado
+            resultados = conn.execute(text("""
                 SELECT id, imagem_path FROM campanhas_imagens
-                WHERE apagada = 1 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = ?)
-            """, (nome_campanha,)).fetchall()
+                WHERE apagada = 1 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
+            """), {"nome": nome_campanha}).fetchall()
 
         paths = [img['imagem_path'] for img in resultados]
         urls_map = get_shared_links_otimizado(paths)
@@ -327,9 +337,9 @@ def imagens_lixeira():
 # --- Página de Upload Público ---
 @upload_bp.route('/<int:campanha_id>', methods=['GET'])
 def upload_page(campanha_id):
-    # (Sua função original mantida)
+    # CORREÇÃO 11: Usando text() e parâmetro nomeado
     with get_db_connection() as conn:
-        campanha = conn.execute("SELECT id, nome FROM campanhas WHERE id = ?", (campanha_id,)).fetchone()
+        campanha = conn.execute(text("SELECT id, nome FROM campanhas WHERE id = :id"), {"id": campanha_id}).fetchone()
     if campanha:
         return render_template('upload_publico.html', campanha=dict(campanha))
     return "Campanha não encontrada", 404
