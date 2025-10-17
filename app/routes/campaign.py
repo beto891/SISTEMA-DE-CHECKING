@@ -10,7 +10,7 @@ import logging
 import sys
 
 # Importação NECESSÁRIA para corrigir o erro ObjectNotExecutableError
-from sqlalchemy import text # <<-- NOVO
+from sqlalchemy import text 
 
 # Importações ajustadas para o sistema de login e socketio
 from flask_login import login_required
@@ -92,7 +92,8 @@ def handle_campaign_item(item_id):
                 # PASSO 2: Encontrar todos os IDs dos espaços dessa campanha
                 # CORREÇÃO 4: Usando text() e marcador nomeado :nome
                 ids_cursor = conn.execute(text("SELECT id FROM campanhas WHERE nome = :nome"), {"nome": nome_da_campanha})
-                ids_para_excluir = [r['id'] for r in ids_cursor.fetchall()]
+                # Corrigido: Acessa o índice 0 de cada tupla para obter o ID
+                ids_para_excluir = [r[0] for r in ids_cursor.fetchall()] 
 
                 if not ids_para_excluir:
                     return jsonify(success=False, mensagem="Nenhum espaço encontrado para esta campanha."), 404
@@ -128,7 +129,8 @@ def handle_campaign_item(item_id):
         campanha = conn.execute(text("SELECT id, nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
     if not campanha:
         return jsonify(success=False, mensagem="Campanha não encontrada."), 404
-    return jsonify(dict(campanha))
+    # CORREÇÃO DE TIPAGEM: Usa o ._mapping para garantir a conversão para dict.
+    return jsonify(dict(campanha._mapping))
 
 
 # --- SUAS OUTRAS ROTAS DESTE ARQUIVO ---
@@ -147,10 +149,14 @@ def ponto_proximo():
     if not campanhas:
         return "Nenhuma campanha cadastrada", 404
 
+    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para um dicionário para que o lambda funcione
+    campanhas_dicts = [dict(c._mapping) for c in campanhas]
+
     ponto = min(
-        campanhas,
+        campanhas_dicts,
         key=lambda c: geodesic((user_lat, user_lon), (c['latitude'], c['longitude'])).km
     )
+    # CORREÇÃO DE TIPAGEM: O objeto 'ponto' é um dicionário e é passado diretamente.
     return render_template('ponto.html', campanha=ponto)
 
 
@@ -163,12 +169,16 @@ def listar_campanhas():
     campanhas = conn.execute(text("SELECT * FROM campanhas")).fetchall()
     campanhas_data = []
     for c in campanhas:
-        camp = dict(c)
+        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para garantir a conversão para dict.
+        # Isto resolve o TypeError na linha camp = dict(c).
+        camp = dict(c._mapping) 
+        
         # CORREÇÃO 9: Usando text() e marcador nomeado :campanha_id
         img_row = conn.execute(
             text("SELECT imagem_path FROM campanhas_imagens WHERE campanha_id = :campanha_id LIMIT 1"),
-            {"campanha_id": c['id']}
+            {"campanha_id": camp['id']} # Usa o dict 'camp' para o ID
         ).fetchone()
+        
         if img_row:
             camp['imagem_url'] = url_for(
                 'static',
@@ -204,7 +214,6 @@ def importar_campanhas():
 
     df.columns = [col.strip().lower() for col in df.columns]
     conn = get_db_connection()
-    # Removemos o conn.cursor() e passamos a usar conn.execute(text()) para compatibilidade com SQLAlchemy 2.0 e PostgreSQL.
     
     ignoradas = 0
     criadas = 0
@@ -272,5 +281,7 @@ def mapa_dados():
         WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     """)).fetchall()
     conn.close()
-    dados_mapa = [dict(p) for p in pontos]
+    # CORREÇÃO DE TIPAGEM: Usa o ._mapping para garantir a conversão para dict.
+    # Isto resolve o TypeError.
+    dados_mapa = [dict(p._mapping) for p in pontos] 
     return jsonify(dados_mapa)
