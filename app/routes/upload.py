@@ -1,12 +1,10 @@
-# Arquivo: app/routes/upload_bp.py
-# Versão 5.1: Versão revisada e ajustada para robustez e compatibilidade com SQLAlchemy 2.0 e PostgreSQL.
-
 import os
 import unicodedata
 from datetime import datetime
 from PIL import Image
 from flask_login import login_required
 from concurrent.futures import ThreadPoolExecutor
+from sqlalchemy import text # NOVO: Importação para compatibilidade com SQLAlchemy 2.0+
 
 from flask import (
     Blueprint, request, jsonify, 
@@ -17,7 +15,6 @@ from werkzeug.utils import secure_filename
 from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 import dropbox
-from sqlalchemy import text # <<-- NOVO: Obrigatório para SQL puro no SQLAlchemy 2.0+
 
 # --- Configuração do Blueprint ---
 upload_bp = Blueprint('upload', __name__, url_prefix='/api/upload')
@@ -52,7 +49,7 @@ def slug(texto: str) -> str:
 
 def get_campaign_from_image_path(conn, imagem_path: str) -> dict | None:
     """Encontra os detalhes da campanha associada a um caminho de imagem."""
-    # CORREÇÃO 1: Usando text() e parâmetro nomeado
+    # CORREÇÃO 1: Usando text() e marcador nomeado :path
     resultado = conn.execute(
         text("SELECT campanha_id FROM campanhas_imagens WHERE imagem_path = :path"), 
         {"path": imagem_path}
@@ -61,13 +58,15 @@ def get_campaign_from_image_path(conn, imagem_path: str) -> dict | None:
     if not resultado:
         return None
     
-    # CORREÇÃO 2: Usando text() e parâmetro nomeado
+    # CORREÇÃO 2: Usando text() e marcador nomeado :campanha_id
     campanha = conn.execute(
-        text("SELECT id, cod, nome FROM campanhas WHERE id = :id"), 
-        {"id": resultado['campanha_id']}
+        text("SELECT id, cod, nome FROM campanhas WHERE id = :campanha_id"), 
+        {"campanha_id": resultado[0]} # Acessa o índice 0 da tupla de resultado
     ).fetchone()
     
-    return dict(campanha) if campanha else None
+    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário antes de retornar
+    return dict(campanha._mapping) if campanha else None
+
 
 # --- Rotas da API ---
 
@@ -82,16 +81,19 @@ def upload_foto():
         return jsonify(success=False, mensagem="O código, o nome da campanha e ao menos uma imagem são obrigatórios."), 400
 
     with get_db_connection() as conn:
-        # CORREÇÃO 3: Usando text() e parâmetros nomeados
-        campanha = conn.execute(
+        # CORREÇÃO 3: Usando text() e marcadores nomeados
+        campanha_row = conn.execute(
             text("SELECT id, cod, nome FROM campanhas WHERE cod = :cod AND nome = :nome"), 
             {"cod": campanha_cod, "nome": campanha_nome}
         ).fetchone()
         
-        if not campanha:
+        if not campanha_row:
             return jsonify(success=False, mensagem="Campanha não encontrada."), 404
         
-        campanha_id = campanha['id']
+        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para acessar os campos por nome
+        campanha = dict(campanha_row._mapping)
+
+        campanha_id = campanha['id'] # AGORA FUNCIONA
         slug_pasta = slug(campanha['nome'])
         dropbox = get_dropbox_service()
         salvos, erros = [], []
@@ -111,7 +113,7 @@ def upload_foto():
                 file_content = arq.read()
                 dropbox.upload_file(file_content, remote_path)
 
-                # CORREÇÃO 4: Usando text() e parâmetros nomeados
+                # CORREÇÃO 4: Usando text() e marcadores nomeados
                 conn.execute(
                     text("INSERT INTO campanhas_imagens (campanha_id, imagem_path) VALUES (:campanha_id, :path)"),
                     {"campanha_id": campanha_id, "path": remote_path}
@@ -147,10 +149,10 @@ def deletar_imagem():
 
         # Atualiza o banco de dados
         with get_db_connection() as conn:
-            # CORREÇÃO 5: Usando text() e parâmetros nomeados
+            # CORREÇÃO 5: Usando text() e marcadores nomeados
             cursor = conn.execute(
-                text("UPDATE campanhas_imagens SET apagada = 1, imagem_path = :lixeira WHERE imagem_path = :path"),
-                {"lixeira": path_lixeira, "path": imagem_path}
+                text("UPDATE campanhas_imagens SET apagada = 1, imagem_path = :path_lixeira WHERE imagem_path = :path_original"),
+                {"path_lixeira": path_lixeira, "path_original": imagem_path}
             )
             # Se a atualização falhar no DB, desfaz a ação no Dropbox
             if cursor.rowcount == 0:
@@ -172,6 +174,7 @@ def restaurar_imagem():
     
     try:
         with get_db_connection() as conn:
+            # Usa a função auxiliar corrigida (get_campaign_from_image_path)
             campanha = get_campaign_from_image_path(conn, imagem_path_lixeira)
             if not campanha:
                 return jsonify(success=False, mensagem="Campanha associada à imagem não encontrada."), 404
@@ -182,10 +185,10 @@ def restaurar_imagem():
             
             dropbox.move_file(imagem_path_lixeira, path_original)
             
-            # CORREÇÃO 6: Usando text() e parâmetros nomeados
+            # CORREÇÃO 6: Usando text() e marcadores nomeados
             cursor = conn.execute(
-                text("UPDATE campanhas_imagens SET apagada = 0, imagem_path = :original WHERE imagem_path = :lixeira"),
-                {"original": path_original, "lixeira": imagem_path_lixeira}
+                text("UPDATE campanhas_imagens SET apagada = 0, imagem_path = :path_original WHERE imagem_path = :path_lixeira"),
+                {"path_original": path_original, "path_lixeira": imagem_path_lixeira}
             )
             if cursor.rowcount == 0:
                 dropbox.move_file(path_original, imagem_path_lixeira)
@@ -211,7 +214,7 @@ def excluir_definitivo():
 
         # ✅ AJUSTE: Se a exclusão no Dropbox for bem-sucedida, remove do banco de dados
         with get_db_connection() as conn:
-            # CORREÇÃO 7: Usando text() e parâmetro nomeado
+            # CORREÇÃO 7: Usando text() e marcador nomeado
             cursor = conn.execute(text("DELETE FROM campanhas_imagens WHERE imagem_path = :path"), {"path": imagem_path})
             if cursor.rowcount == 0:
                 # Se não encontrar no banco, mas já excluiu no Dropbox, isso é uma falha
@@ -223,11 +226,11 @@ def excluir_definitivo():
     except dropbox.exceptions.ApiError as e:
         # Se o arquivo não existe no Dropbox, podemos assumir que já foi excluído.
         if "path/not_found/" in str(e):
-              with get_db_connection() as conn:
-                # CORREÇÃO 8: Usando text() e parâmetro nomeado
-                cursor = conn.execute(text("DELETE FROM campanhas_imagens WHERE imagem_path = :path"), {"path": imagem_path})
-                conn.commit()
-              return jsonify(success=True, mensagem="Imagem já havia sido excluída do Dropbox. Registro removido do banco."), 200
+             with get_db_connection() as conn:
+                 # CORREÇÃO 8: Usando text() e marcador nomeado
+                 cursor = conn.execute(text("DELETE FROM campanhas_imagens WHERE imagem_path = :path"), {"path": imagem_path})
+                 conn.commit()
+             return jsonify(success=True, mensagem="Imagem já havia sido excluída do Dropbox. Registro removido do banco."), 200
         current_app.logger.error(f"Falha na exclusão definitiva do Dropbox: {e}")
         return jsonify(success=False, mensagem="Erro na exclusão do arquivo no Dropbox."), 500
     except Exception as e:
@@ -275,6 +278,8 @@ def get_shared_links_otimizado(paths):
     return urls
 
 # <<< VERSÃO CORRIGIDA DA ROTA /imagens >>>
+# Em app/routes/upload.py
+
 @upload_bp.route('/imagens', methods=['GET'])
 @login_required
 def imagens_ativas():
@@ -285,18 +290,21 @@ def imagens_ativas():
 
     try:
         with get_db_connection() as conn:
-            # CORREÇÃO 9: Usando text() e parâmetro nomeado
+            # CORREÇÃO 9: Usando text() e marcador nomeado :nome
+            # Subquery aninhada para obter o ID da campanha
             resultados = conn.execute(text("""
                 SELECT id, imagem_path FROM campanhas_imagens
-                WHERE apagada = 0 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
+                WHERE apagada = 0 
+                AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
             """), {"nome": nome_campanha}).fetchall()
 
         # Usa a função otimizada para buscar todos os links de uma vez
         paths = [img['imagem_path'] for img in resultados]
-        urls_map = get_shared_links_otimizado(paths)
+        urls_map = get_shared_links_otimizados([p[0] for p in paths]) # Converte para lista de paths
         
+        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para construir a lista final
         imagens = [
-            {'id': img['id'], 'path': img['imagem_path'], 'url': urls_map.get(img['imagem_path'].lower(), "#")} 
+            {'id': img._mapping['id'], 'path': img._mapping['imagem_path'], 'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
             for img in resultados
         ]
         return jsonify(success=True, imagens=imagens)
@@ -316,17 +324,19 @@ def imagens_lixeira():
 
     try:
         with get_db_connection() as conn:
-            # CORREÇÃO 10: Usando text() e parâmetro nomeado
+            # CORREÇÃO 10: Usando text() e marcador nomeado :nome
             resultados = conn.execute(text("""
                 SELECT id, imagem_path FROM campanhas_imagens
-                WHERE apagada = 1 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
+                WHERE apagada = 1 
+                AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
             """), {"nome": nome_campanha}).fetchall()
 
         paths = [img['imagem_path'] for img in resultados]
-        urls_map = get_shared_links_otimizado(paths)
+        urls_map = get_shared_links_otimizado([p[0] for p in paths]) # Converte para lista de paths
         
+        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para construir a lista final
         imagens = [
-            {'id': img['id'], 'path': img['imagem_path'], 'url': urls_map.get(img['imagem_path'].lower(), "#")} 
+            {'id': img._mapping['id'], 'path': img._mapping['imagem_path'], 'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
             for img in resultados
         ]
         return jsonify(success=True, imagens=imagens)
@@ -337,9 +347,11 @@ def imagens_lixeira():
 # --- Página de Upload Público ---
 @upload_bp.route('/<int:campanha_id>', methods=['GET'])
 def upload_page(campanha_id):
-    # CORREÇÃO 11: Usando text() e parâmetro nomeado
+    # (Sua função original mantida)
     with get_db_connection() as conn:
-        campanha = conn.execute(text("SELECT id, nome FROM campanhas WHERE id = :id"), {"id": campanha_id}).fetchone()
-    if campanha:
-        return render_template('upload_publico.html', campanha=dict(campanha))
+        # CORREÇÃO 11: Usando text() e marcador nomeado
+        campanha_row = conn.execute(text("SELECT id, nome FROM campanhas WHERE id = :id"), {"id": campanha_id}).fetchone()
+    if campanha_row:
+        # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário
+        return render_template('upload_publico.html', campanha=dict(campanha_row._mapping))
     return "Campanha não encontrada", 404
