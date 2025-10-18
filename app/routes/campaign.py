@@ -86,7 +86,9 @@ def handle_campaign_item(item_id):
                 row = conn.execute(text("SELECT nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
                 if not row:
                     return jsonify(success=False, mensagem="Espaço da campanha não encontrado."), 404
-                
+                # Converte o objeto Row do SQLAlchemy em um dicionário Python para acesso por nome
+                row = dict(row._mapping) 
+
                 nome_da_campanha = row['nome']
 
                 # PASSO 2: Encontrar todos os IDs dos espaços dessa campanha
