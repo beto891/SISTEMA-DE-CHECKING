@@ -291,20 +291,24 @@ def imagens_ativas():
     try:
         with get_db_connection() as conn:
             # CORREÇÃO 9: Usando text() e marcador nomeado :nome
-            # Subquery aninhada para obter o ID da campanha
             resultados = conn.execute(text("""
                 SELECT id, imagem_path FROM campanhas_imagens
                 WHERE apagada = 0 
                 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
             """), {"nome": nome_campanha}).fetchall()
 
-        # Usa a função otimizada para buscar todos os links de uma vez
-        paths = [img['imagem_path'] for img in resultados]
-        urls_map = get_shared_links_otimizado([p[0] for p in paths]) # Converte para lista de paths
+        # >>> CORREÇÃO CRÍTICA DE TIPAGEM E DADOS: Simplifica a extração do path
+        # 1. Extrai APENAS as strings de imagem_path (usando ._mapping para segurança)
+        paths = [img._mapping['imagem_path'] for img in resultados]
         
-        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para construir a lista final
+        # 2. Chama a função, passando APENAS a lista de strings
+        urls_map = get_shared_links_otimizado(paths) # Removido o [p[0] for p in paths] extra
+        
+        # 3. Constrói a lista final (usando ._mapping)
         imagens = [
-            {'id': img._mapping['id'], 'path': img._mapping['imagem_path'], 'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
+            {'id': img._mapping['id'], 
+             'path': img._mapping['imagem_path'], 
+             'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
             for img in resultados
         ]
         return jsonify(success=True, imagens=imagens)
@@ -331,12 +335,15 @@ def imagens_lixeira():
                 AND campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
             """), {"nome": nome_campanha}).fetchall()
 
-        paths = [img['imagem_path'] for img in resultados]
-        urls_map = get_shared_links_otimizado([p[0] for p in paths]) # Converte para lista de paths
+        # >>> CORREÇÃO CRÍTICA DE TIPAGEM E DADOS: Simplifica a extração do path
+        paths = [img._mapping['imagem_path'] for img in resultados]
+        urls_map = get_shared_links_otimizado(paths) # Removido o [p[0] for p in paths] extra
         
-        # CORREÇÃO DE TIPAGEM: Usa o ._mapping para construir a lista final
+        # 3. Constrói a lista final (usando ._mapping)
         imagens = [
-            {'id': img._mapping['id'], 'path': img._mapping['imagem_path'], 'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
+            {'id': img._mapping['id'], 
+             'path': img._mapping['imagem_path'], 
+             'url': urls_map.get(img._mapping['imagem_path'].lower(), "#")} 
             for img in resultados
         ]
         return jsonify(success=True, imagens=imagens)
