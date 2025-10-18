@@ -19,11 +19,13 @@ def dashboard_admin():
         GROUP BY c.nome
     """)).fetchall()
 
+    resultados_dicts = [dict(row._mapping) for row in resultados]
+
     registros = []
     labels = []
     valores = []
 
-    for row in resultados:
+    for row in resultados_dicts:
         nome = row["campanha"]
         total = row["total_espacos"]
         com_imagem = row["espacos_com_imagem"]
