@@ -54,7 +54,7 @@ def handle_campaign_item(item_id):
 
                 # 1. Primeiro, usamos o ID para encontrar o NOME ANTIGO da campanha.
                 # CORREÇÃO 1: Usando text() e marcador nomeado :id
-                row = conn.execute(text("SELECT nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()
+                row = dict(conn.execute(text("SELECT nome FROM campanhas WHERE id = :id"), {"id": item_id}).fetchone()._mapping)
                 if not row:
                     return jsonify(success=False, mensagem="Campanha original não encontrada."), 404
                 
