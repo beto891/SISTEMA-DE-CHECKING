@@ -89,7 +89,7 @@ function abrirGaleria(campanhaId, nomeCampanha) {
     }
     const galeriaModal = $('#modalGaleria');
     galeriaModal.data('campanha-nome', nomeCampanha);
-    galeriaModal.find('#modalGaleriaLabel').text(`Campanha - : ${nomeCampanha}`);
+    galeriaModal.find('#modalGaleriaLabel').text(`Campanha: ${nomeCampanha}`);
     $('#galeriaTabs .nav-link').removeClass('active');
     $('#tabAtivas').addClass('active');
     galeriaModal.modal('show');

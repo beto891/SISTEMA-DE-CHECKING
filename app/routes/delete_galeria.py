@@ -51,6 +51,8 @@ def move_image_to_trash():
             if not imagem:
                 return jsonify(success=False, mensagem="Imagem não encontrada ou já está na lixeira."), 404
             
+            imagem = dict(imagem._mapping)  # Converte o objeto Row do SQLAlchemy em um dicionário Python
+
             caminho_atual = imagem['imagem_path']
             nome_arquivo = os.path.basename(caminho_atual)
             caminho_lixeira = f"{PASTA_LIXEIRA_DROPBOX}/{nome_arquivo}"

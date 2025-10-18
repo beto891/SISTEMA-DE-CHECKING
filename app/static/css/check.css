@@ -37,6 +37,23 @@ body {
     line-height: 1.6;
 }
 
+/* --- CSS Para Tornar a Rolagem Invisível --- */
+
+/* Aplica o estilo de rolagem invisível para navegadores WebKit */
+.modal-body::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none;
+}
+
+/* Aplica o estilo de rolagem invisível para Firefox e IE */
+.modal-body {
+    /* Firefox */
+    scrollbar-width: none;
+    /* IE/Edge (legado) */
+    -ms-overflow-style: none; 
+}
+
 /* ==========================================================================
    AJUSTE PARA DEIXAR A BARRA DE ROLAGEM INVISÍVEL
    (Aplica-se à página inteira e à tabela)
