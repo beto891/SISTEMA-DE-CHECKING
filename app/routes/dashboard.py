@@ -6,6 +6,7 @@ from app.services.dropbox_service import DropboxService
 from app import db # Importado para acessar o engine do SQLAlchemy
 import os
 from sqlalchemy import text # Importação obrigatória para SQL puro no SQLAlchemy 2.0+
+from flask_login import login_required
 
 dashboard_bp = Blueprint('dashboard', __name__)
 dropbox_service = DropboxService()
@@ -24,6 +25,7 @@ def inicio():
     return redirect(url_for('auth.login'))
 
 @dashboard_bp.route('/dashboard')
+@login_required
 def dashboard():
     # Usando db.engine.connect() para obter a conexão (Melhor prática com Flask-SQLAlchemy)
     conn = db.engine.connect()
@@ -116,6 +118,7 @@ def dashboard():
     )
 
 @dashboard_bp.route('/api/report-location', methods=['POST'])
+@login_required
 def report_location():
     """
     Endpoint para receber e salvar a localização do utilizador.
@@ -158,6 +161,7 @@ def report_location():
         return jsonify(success=False, mensagem=f"Erro interno do servidor: {str(e)}"), 500
 
 @dashboard_bp.route('/api/user-locations', methods=['GET'])
+@login_required
 def get_user_locations():
     """
     Endpoint para buscar todas as localizações de utilizadores salvas no banco de dados.
@@ -176,6 +180,7 @@ def get_user_locations():
     return jsonify(resultados), 200
 
 @dashboard_bp.route('/api/campanha-imagens')
+@login_required
 def campanha_imagens():
     nome = request.args.get("nome")
     if not nome:
@@ -205,6 +210,7 @@ def campanha_imagens():
 # O trecho @dashboard_bp.route('/api/upload/imagens') estava comentado e foi mantido assim.
 
 @dashboard_bp.route('/gerar-pdf', methods=["POST"])
+@login_required
 def gerar_pdf_campanha_post():
     nome    = request.form.get("nome")
     pi      = request.form.get("pi")
@@ -229,6 +235,7 @@ def gerar_pdf_campanha_post():
     )
 
 @dashboard_bp.route('/gerar-pdf-campanha/<nome>', methods=['GET'])
+@login_required
 def gerar_pdf_campanha_get(nome):
     if 'usuario' not in session:
         return redirect(url_for('auth.login'))
@@ -250,6 +257,7 @@ def gerar_pdf_campanha_get(nome):
     )
 
 @dashboard_bp.route('/verificar-imagens-campanha/<nome>')
+@login_required
 def verificar_imagens(nome):
     conn = db.engine.connect() # Padronizando para db.engine.connect()
     
@@ -283,6 +291,7 @@ def verificar_imagens(nome):
     return {"campanha": nome, "total": len(resultado), "registros": resultado}
 
 @dashboard_bp.route('/api/campanha/<int:id_campanha>', methods=['DELETE'])
+@login_required
 def excluir_campanha_api(id_campanha):
     conn = db.engine.connect() # Padronizando para db.engine.connect()
 

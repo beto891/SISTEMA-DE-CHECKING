@@ -133,6 +133,7 @@ def upload_foto():
     }), 200
 
 @upload_bp.route('/deletar', methods=['POST'])
+@login_required
 def deletar_imagem():
     """Move uma imagem para a lixeira (identificada apenas pelo path)."""
     imagem_path = request.form.get('imagem')
@@ -166,6 +167,7 @@ def deletar_imagem():
         return jsonify(success=False, mensagem="Erro ao processar a exclusão."), 500
 
 @upload_bp.route('/restaurar', methods=['POST'])
+@login_required
 def restaurar_imagem():
     """Restaura uma imagem da lixeira (identificada apenas pelo path)."""
     imagem_path_lixeira = request.form.get('imagem')
@@ -201,6 +203,7 @@ def restaurar_imagem():
         return jsonify(success=False, mensagem="Erro ao restaurar imagem."), 500
 
 @upload_bp.route('/excluir_definitivo', methods=['POST'])
+@login_required
 def excluir_definitivo():
     """Exclui permanentemente uma imagem (identificada apenas pelo path)."""
     imagem_path = request.form.get('imagem')
@@ -353,6 +356,7 @@ def imagens_lixeira():
 
 # --- Página de Upload Público ---
 @upload_bp.route('/<int:campanha_id>', methods=['GET'])
+@login_required
 def upload_page(campanha_id):
     # (Sua função original mantida)
     with get_db_connection() as conn:
