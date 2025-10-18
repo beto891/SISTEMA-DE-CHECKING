@@ -182,7 +182,7 @@ def listar_campanhas():
         if img_row:
             camp['imagem_url'] = url_for(
                 'static',
-                ilename=img_row._mapping['imagem_path'], # <--- CORREÇÃO
+                filename=img_row._mapping['imagem_path'], # <--- CORREÇÃO
                 _external=False
             )
         else:
