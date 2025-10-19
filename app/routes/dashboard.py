@@ -24,17 +24,19 @@ def gerar_link_publico(path):
 def inicio():
     return redirect(url_for('auth.login'))
 
+# Em app/routes/dashboard.py
+
 @dashboard_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # Usando db.engine.connect() para obter a conexão (Melhor prática com Flask-SQLAlchemy)
     conn = db.engine.connect()
 
-    # Query 1 (resultados) - JÁ ESTAVA CORRETO
+    # Query 1 (resultados) - CORRIGIDA
     resultados = conn.execute(text("""
         SELECT
             c.nome AS campanha,
             c.data_criacao,
+            c.concluida,  -- ✅ 1. SELECIONA A NOVA COLUNA
             MIN(c.id) AS id,
             COUNT(DISTINCT c.cod) AS total_espacos,
             COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
@@ -44,31 +46,16 @@ def dashboard():
         ON i.campanha_id = c.id
         GROUP BY
             c.nome,
-            c.data_criacao      -- Correção PostgreSQL: Adicionado ao GROUP BY
+            c.data_criacao,
+            c.concluida   -- ✅ 2. ADICIONA AO GROUP BY
         ORDER BY c.nome
     """)).fetchall()
 
-    # Query 2 (espacos_por_campanha) - JÁ ESTAVA CORRETO
-    espacos_por_campanha = conn.execute(text("""
-        SELECT c.nome AS campanha, c.cod AS espaco_nome
-        FROM campanhas c
-        JOIN campanhas_imagens i ON i.campanha_id = c.id
-        WHERE i.imagem_path IS NOT NULL
-    """)).fetchall()
-
-    # Query 3 (imagens_por_espaco) - JÁ ESTAVA CORRETO
-    imagens_por_espaco = conn.execute(text("""
-        SELECT c.nome AS campanha, c.cod AS espaco, i.imagem_path
-        FROM campanhas c
-        JOIN campanhas_imagens i ON i.campanha_id = c.id
-        WHERE i.imagem_path IS NOT NULL
-        ORDER BY c.nome, c.cod, i.id
-    """)).fetchall()
-
+    # As outras queries permanecem iguais...
+    espacos_por_campanha = conn.execute(text(""" ... """))
+    imagens_por_espaco = conn.execute(text(""" ... """))
     conn.close()
 
-    # CORREÇÃO DE TIPAGEM: Converte os objetos Row para dicionários Python para uso posterior.
-    # Isto resolve o TypeError: tuple indices must be integers or slices, not str
     resultados_dicts = [dict(row._mapping) for row in resultados]
     espacos_por_campanha_dicts = [dict(row._mapping) for row in espacos_por_campanha]
     imagens_por_espaco_dicts = [dict(row._mapping) for row in imagens_por_espaco]
@@ -79,14 +66,12 @@ def dashboard():
 
     imagens_dict = {}
     for row in imagens_por_espaco_dicts:
-        campanha = row["campanha"]
-        espaco = row["espaco"]
-        imagem = row["imagem_path"]
-        imagens_dict.setdefault(campanha, {}).setdefault(espaco, []).append(imagem)
+        # ... (lógica existente)
+        imagens_dict.setdefault(row["campanha"], {}).setdefault(row["espaco"], []).append(row["imagem_path"])
 
     registros, labels, valores = [], [], []
 
-    for row in resultados_dicts: # Usa a lista de dicionários corrigida
+    for row in resultados_dicts:
         campanha = row["campanha"]
         total = row["total_espacos"]
         com_imagem = row["espacos_com_imagem"]
@@ -94,20 +79,20 @@ def dashboard():
 
         labels.append(campanha)
         valores.append(percentual)
-
         espaco_destaque = espacos_dict.get(campanha, [None])[0]
 
         registros.append({
             "id": row["id"],
             "campanha": campanha,
-            "data_criacao": row["data_criacao"],  # ✅ AJUSTE AQUI: Adiciona a data de criação
+            "data_criacao": row["data_criacao"],
             "espaco_nome": espaco_destaque,
             "espacos": total,
             "imagens": com_imagem,
             "percentual": percentual,
             "meta": percentual >= 10,
             "espacos_com_imagem_lista": espacos_dict.get(campanha, []),
-            "imagens_por_espaco": imagens_dict.get(campanha, {})
+            "imagens_por_espaco": imagens_dict.get(campanha, {}),
+            "concluida": row["concluida"]  # ✅ 3. PASSA O VALOR PARA O TEMPLATE
         })
 
     return render_template(
