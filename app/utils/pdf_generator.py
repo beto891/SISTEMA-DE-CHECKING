@@ -53,7 +53,7 @@ def buscar_localizacao(lat, lng):
 def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
     conn = get_db_connection()
     
-    # CORREÇÃO: Usando text() e parâmetro nomeado para compatibilidade com SQLAlchemy 2.0 e PostgreSQL
+    # Adicionamos "AND i.apagada = 0" para filtrar imagens na lixeira
     rows = conn.execute(text("""
         SELECT
             c.id,
@@ -64,7 +64,7 @@ def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
             i.imagem_path
         FROM campanhas AS c
         LEFT JOIN campanhas_imagens AS i
-        ON i.campanha_id = c.id
+        ON i.campanha_id = c.id AND i.apagada = 0
         WHERE LOWER(c.nome) LIKE :nome_campanha
     """), {"nome_campanha": f"%{nome_campanha.lower()}%"}).fetchall()
     
