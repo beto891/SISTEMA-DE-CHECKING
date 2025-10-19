@@ -5,6 +5,7 @@ from flask_login import login_required
 from sqlalchemy import text
 from dropbox.exceptions import ApiError
 import os
+from ..helpers import get_dropbox_service, slug, get_campaign_from_image_path
 
 # Importe as funções auxiliares que você vai precisar
 from ..utils.database import get_db_connection

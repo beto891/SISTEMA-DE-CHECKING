@@ -5,7 +5,7 @@ from PIL import Image
 from flask_login import login_required
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import text # NOVO: Importação para compatibilidade com SQLAlchemy 2.0+
-from ..utils import get_dropbox_service, slug, get_campaign_from_image_path
+from ..helpers import get_dropbox_service, slug, get_campaign_from_image_path
 
 from flask import (
     Blueprint, request, jsonify, 
