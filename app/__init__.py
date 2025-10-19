@@ -70,6 +70,7 @@ def create_app():
         from .routes.upload import upload_bp
         from .routes.delete_galeria import delete_galeria_bp
         from .routes.admin_bp import admin_bp
+        from .routes.image_routes import image_bp
         
         # Importa o arquivo de eventos do socketio para que os handlers sejam registrados
         from . import socketio_events 
@@ -83,5 +84,6 @@ def create_app():
         app.register_blueprint(upload_bp)
         app.register_blueprint(delete_galeria_bp)
         app.register_blueprint(admin_bp)
+        app.register_blueprint(image_bp)
 
     return app
