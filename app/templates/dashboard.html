@@ -96,6 +96,7 @@
                 <th>% Coberto</th>
                 <th>Status da Meta</th>
                 <th>Ações</th>
+                <th>Concluída</th>
             </tr>
         </thead>
         <tbody id="tabelaCampanhas">
@@ -133,6 +134,21 @@
                 </div>
             </div>
         </td>
+
+        <th>OK?</th>
+        <td>
+            <div class="custom-control custom-switch">
+                <input type="checkbox" 
+                    class="custom-control-input campaign-status-checkbox" 
+                    id="status-{{ campanha.id }}" 
+                    data-id="{{ campanha.id }}"
+                    {% if campanha.concluida %}checked{% endif %}>
+                <label class="custom-control-label" for="status-{{ campanha.id }}"></label>
+            </div>
+        </td>
+        <td>
+    </td>
+
     </tr>
     {% endfor %}
 </tbody>

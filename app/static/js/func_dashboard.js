@@ -64,6 +64,8 @@ function normalizarUrlDropbox(url) {
     }
 }
 
+
+
 // --- FUNÇÕES DE AÇÃO DE MODAIS (PDF, GALERIA, EDIÇÃO, EXCLUSÃO) ---
 
 function abrirModalPdf(campanhaNome) {
@@ -300,9 +302,22 @@ async function executarAcaoImagem(acao, id) {
 $(document).ready(function() {
     console.log("DOM carregado. Anexando todos os ouvintes de evento...");
 
-    // --- Gerenciador de cliques para a TABELA PRINCIPAL ---
+    // --- CARREGAMENTO INICIAL DO DASHBOARD ---
+    // Chama a função do arquivo 'campanhas_map.js' para carregar o mapa inicial.
+    // Certifique-se de que o arquivo 'campanhas_map.js' foi carregado antes deste.
+    if (typeof recarregarMapaComCampanhasAtivas === 'function') {
+        recarregarMapaComCampanhasAtivas();
+    } else {
+        console.error("A função 'recarregarMapaComCampanhasAtivas' não foi encontrada. Verifique a ordem de importação dos seus scripts.");
+    }
+    // Se você tiver uma função para o gráfico, chame-a aqui também.
+    // Ex: recarregarGraficoComCampanhasAtivas();
+
+
+    // --- GERENCIADOR DE CLIQUES DELEGADO PARA A TABELA PRINCIPAL ---
     $('#tabelaCampanhas').on('click', function(event) {
         const target = event.target;
+        
         const pdfButton = target.closest('.btn-pdf');
         if (pdfButton) {
             abrirModalPdf(pdfButton.dataset.nome);
@@ -325,7 +340,40 @@ $(document).ready(function() {
         }
     });
 
-    // --- Gerenciador de cliques para as ABAS DA GALERIA ---
+    /**
+     * ✅ NOVO: Gerenciador de mudança para o checkbox de status da campanha.
+     */
+    $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
+        const checkbox = $(this);
+        const campanhaId = checkbox.data('id');
+        const isConcluida = checkbox.is(':checked');
+
+        try {
+            const response = await fetch(`/api/campaign/${campanhaId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ concluida: isConcluida })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.mensagem);
+
+            showBootstrapAlert(data.mensagem, 'success');
+
+            // Atualiza o mapa e outros componentes do dashboard
+            if (typeof recarregarMapaComCampanhasAtivas === 'function') {
+                recarregarMapaComCampanhasAtivas();
+            }
+
+        } catch (error) {
+            console.error('Erro ao atualizar status:', error);
+            showBootstrapAlert(error.message, 'danger');
+            checkbox.prop('checked', !isConcluida); // Desfaz a ação
+        }
+    });
+
+
+    // --- GERENCIADORES DE CLIQUES PARA MODAIS E GALERIA ---
+
     $('#galeriaTabs').on('click', '.nav-link', function(e) {
         e.preventDefault();
         const isLixeira = $(this).attr('id') === 'tabLixeira';
@@ -334,10 +382,8 @@ $(document).ready(function() {
         carregarImagens(isLixeira);
     });
 
-    // --- Gerenciador de cliques para os botões de AÇÃO DA GALERIA ---
     $('#galeriaContainer').on('click', 'button[data-acao]', function() {
-        const botao = this;
-        const { acao, id, nome } = botao.dataset;
+        const { acao, id, nome } = this.dataset;
         if (acao === 'deletar' || acao === 'excluir_definitivo') {
             confirmarAcaoImagem(acao, id, nome);
         } else if (acao === 'restaurar') {
@@ -345,15 +391,13 @@ $(document).ready(function() {
         }
     });
     
-    // --- Outros Listeners para botões de confirmação em modais ---
     $('#btnSalvarEdicao').on('click', salvarEdicaoCampanha);
     $('#btnConfirmarExclusaoCampanha').on('click', confirmarExclusaoCampanha);
     $('#btnGerarPdf').on('click', confirmarGeracao);
-    $('#inputImagem').on('change', function() { // Para o modal de PDF
+    $('#inputImagem').on('change', function() {
         $('#nomeArquivo').val(this.files.length > 0 ? this.files[0].name : 'Nenhum arquivo selecionado');
     });
 
-    // Limpa o formulário de edição quando o modal é fechado
     $('#modalEdicaoCampanha').on('hidden.bs.modal', function () {
         $(this).find('#editCampanhaId').val('');
         $(this).find('#editCampanhaNome').val('');

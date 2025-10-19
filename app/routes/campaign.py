@@ -272,18 +272,49 @@ def importar_campanhas():
         "ignoradas": ignoradas
     }), 200
 
+# Em app/routes/campaign.py
+
 @campaign_bp.route('/mapa-dados')
 @login_required
 def mapa_dados():
     conn = get_db_connection()
-    # CORREÇÃO 12: Usando text()
     pontos = conn.execute(text("""
-        SELECT id, cod, nome, latitude, longitude
+        SELECT id, cod, nome, latitude, longitude, concluida  -- <<< ADICIONADO 'concluida'
         FROM campanhas
-        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+        WHERE latitude IS NOT NULL 
+        AND longitude IS NOT NULL
+        AND concluida = FALSE  -- <<< FILTRO PRINCIPAL ADICIONADO
     """)).fetchall()
     conn.close()
-    # CORREÇÃO DE TIPAGEM: Usa o ._mapping para garantir a conversão para dict.
-    # Isto resolve o TypeError.
+    
+    # Esta linha já funciona perfeitamente e vai incluir o campo 'concluida' no JSON
     dados_mapa = [dict(p._mapping) for p in pontos] 
     return jsonify(dados_mapa)
+
+@campaign_bp.route('/<int:campanha_id>/status', methods=['PUT'])
+@login_required
+def atualizar_status_campanha(campanha_id):
+    """Atualiza o status de conclusão de uma campanha."""
+    data = request.get_json()
+    novo_status = data.get('concluida')
+
+    if novo_status is None or not isinstance(novo_status, bool):
+        return jsonify(success=False, mensagem="Status 'concluida' (true/false) é obrigatório."), 400
+
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.execute(
+                text("UPDATE campanhas SET concluida = :status WHERE id = :id"),
+                {"status": novo_status, "id": campanha_id}
+            )
+            
+            if cursor.rowcount == 0:
+                return jsonify(success=False, mensagem="Campanha não encontrada."), 404
+            
+            conn.commit()
+            mensagem = "Campanha marcada como concluída." if novo_status else "Campanha reativada."
+            return jsonify(success=True, mensagem=mensagem)
+
+    except Exception as e:
+        current_app.logger.error(f"Erro ao atualizar status da campanha {campanha_id}: {e}")
+        return jsonify(success=False, mensagem="Erro interno ao atualizar status."), 500
