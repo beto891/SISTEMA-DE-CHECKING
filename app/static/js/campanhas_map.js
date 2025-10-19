@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         map.on('zoomend', ajustarLayoutAposZoom);
 
-        fetchAndDisplayCampaigns();
+        recarregarMapaComCampanhasAtivas(); // Carrega as campanhas ativas inicialmente
         fetchAndDisplayUserLocations();
     }
 
@@ -367,7 +367,7 @@ $('#form-importar').off('submit').on('submit', function(event) {
         
         if (data.success) {
             // ✅ 1. ATUALIZA O MAPA (já estava aqui)
-            fetchAndDisplayCampaigns();
+            recarregarMapaComCampanhasAtivas(); // <<< CORRIGIDO
 
             // ✅ PONTO DE VERIFICAÇÃO:
             console.log("SUCESSO NA IMPORTAÇÃO. Tentando atualizar o mapa...");
