@@ -31,7 +31,7 @@ def get_dropbox_service():
 #  >>> É AQUI QUE VAMOS COLAR AS FUNÇÕES DE RESTAURAR E EXCLUIR <<<
 #
 
-@image_bp.route('/image/restore', methods=['POST']) # ROTA CORRIGIDA
+@image_bp.route('/restore', methods=['POST']) # ROTA CORRIGIDA
 @login_required
 def restaurar_imagem():
     """Restaura uma imagem da lixeira (identificada apenas pelo path)."""

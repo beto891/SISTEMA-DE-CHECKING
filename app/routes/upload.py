@@ -5,6 +5,7 @@ from PIL import Image
 from flask_login import login_required
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import text # NOVO: Importação para compatibilidade com SQLAlchemy 2.0+
+from ..utils import get_dropbox_service, slug, get_campaign_from_image_path
 
 from flask import (
     Blueprint, request, jsonify, 
@@ -23,49 +24,49 @@ upload_bp = Blueprint('upload', __name__, url_prefix='/api/upload')
 EXTENSOES_VALIDAS = {'.png', '.jpg', '.jpeg', '.webp'}
 PASTA_LIXEIRA = "/LIXEIRA"
 
-# --- Funções Auxiliares ---
+# # --- Funções Auxiliares ---
 
-def get_dropbox_service():
-    """Inicializa e retorna uma instância do serviço do Dropbox."""
-    try:
-        return DropboxService(
-            refresh_token=current_app.config['DROPBOX_REFRESH_TOKEN'],
-            app_key=current_app.config['DROPBOX_APP_KEY'],
-            app_secret=current_app.config['DROPBOX_APP_SECRET']
-        )
-    except KeyError as e:
-        current_app.logger.error(f"❌ Configuração do Dropbox ausente: {e}")
-        raise RuntimeError(f"Credencial do Dropbox não encontrada: {e}")
+# def get_dropbox_service():
+#     """Inicializa e retorna uma instância do serviço do Dropbox."""
+#     try:
+#         return DropboxService(
+#             refresh_token=current_app.config['DROPBOX_REFRESH_TOKEN'],
+#             app_key=current_app.config['DROPBOX_APP_KEY'],
+#             app_secret=current_app.config['DROPBOX_APP_SECRET']
+#         )
+#     except KeyError as e:
+#         current_app.logger.error(f"❌ Configuração do Dropbox ausente: {e}")
+#         raise RuntimeError(f"Credencial do Dropbox não encontrada: {e}")
 
-def normalizar(texto: str) -> str:
-    """Remove acentos e caracteres especiais, convertendo para minúsculas."""
-    if not isinstance(texto, str):
-        texto = str(texto)
-    return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8').lower()
+# def normalizar(texto: str) -> str:
+#     """Remove acentos e caracteres especiais, convertendo para minúsculas."""
+#     if not isinstance(texto, str):
+#         texto = str(texto)
+#     return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8').lower()
 
-def slug(texto: str) -> str:
-    """Converte uma string para um formato 'slug' seguro para nomes de arquivo/pasta."""
-    return normalizar(texto).replace(' ', '_').replace('-', '_')
+# def slug(texto: str) -> str:
+#     """Converte uma string para um formato 'slug' seguro para nomes de arquivo/pasta."""
+#     return normalizar(texto).replace(' ', '_').replace('-', '_')
 
-def get_campaign_from_image_path(conn, imagem_path: str) -> dict | None:
-    """Encontra os detalhes da campanha associada a um caminho de imagem."""
-    # CORREÇÃO 1: Usando text() e marcador nomeado :path
-    resultado = conn.execute(
-        text("SELECT campanha_id FROM campanhas_imagens WHERE imagem_path = :path"), 
-        {"path": imagem_path}
-    ).fetchone()
+# def get_campaign_from_image_path(conn, imagem_path: str) -> dict | None:
+#     """Encontra os detalhes da campanha associada a um caminho de imagem."""
+#     # CORREÇÃO 1: Usando text() e marcador nomeado :path
+#     resultado = conn.execute(
+#         text("SELECT campanha_id FROM campanhas_imagens WHERE imagem_path = :path"), 
+#         {"path": imagem_path}
+#     ).fetchone()
 
-    if not resultado:
-        return None
+#     if not resultado:
+#         return None
     
-    # CORREÇÃO 2: Usando text() e marcador nomeado :campanha_id
-    campanha = conn.execute(
-        text("SELECT id, cod, nome FROM campanhas WHERE id = :campanha_id"), 
-        {"campanha_id": resultado[0]} # Acessa o índice 0 da tupla de resultado
-    ).fetchone()
+#     # CORREÇÃO 2: Usando text() e marcador nomeado :campanha_id
+#     campanha = conn.execute(
+#         text("SELECT id, cod, nome FROM campanhas WHERE id = :campanha_id"), 
+#         {"campanha_id": resultado[0]} # Acessa o índice 0 da tupla de resultado
+#     ).fetchone()
     
-    # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário antes de retornar
-    return dict(campanha._mapping) if campanha else None
+#     # CORREÇÃO DE TIPAGEM: Converte o objeto Row para dicionário antes de retornar
+#     return dict(campanha._mapping) if campanha else None
 
 
 # --- Rotas da API ---
