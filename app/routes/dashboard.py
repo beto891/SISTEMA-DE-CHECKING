@@ -315,3 +315,39 @@ def excluir_campanha_api(id_campanha):
         return jsonify({"success": False, "message": "Erro ao excluir campanha."}), 500
     finally:
         conn.close()
+
+# Em app/routes/dashboard.py
+
+@dashboard_bp.route('/api/dashboard/chart-data')
+@login_required
+def get_chart_data():
+    """Retorna apenas os dados de labels e valores para o gráfico do dashboard."""
+    try:
+        with db.engine.connect() as conn:
+            # A mesma query da sua rota dashboard, MAS filtrando as concluídas
+            resultados = conn.execute(text("""
+                SELECT
+                    c.nome AS campanha,
+                    COUNT(DISTINCT c.cod) AS total_espacos,
+                    COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
+                        AS espacos_com_imagem
+                FROM campanhas c
+                LEFT JOIN campanhas_imagens i ON i.campanha_id = c.id
+                WHERE c.concluida = FALSE  -- <<< FILTRO PRINCIPAL AQUI
+                GROUP BY c.nome
+                ORDER BY c.nome
+            """)).fetchall()
+
+        labels, valores = [], []
+        for row in resultados:
+            total = row.total_espacos
+            com_imagem = row.espacos_com_imagem
+            percentual = round((com_imagem / total) * 100, 2) if total > 0 else 0
+            labels.append(row.campanha)
+            valores.append(percentual)
+            
+        return jsonify(labels=labels, valores=valores)
+
+    except Exception as e:
+        print(f"Erro ao buscar dados do gráfico: {e}")
+        return jsonify(error="Erro ao buscar dados do gráfico"), 500

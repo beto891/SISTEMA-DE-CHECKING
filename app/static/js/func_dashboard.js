@@ -384,7 +384,10 @@ $(document).ready(function() {
                 recarregarMapaComCampanhasAtivas();
             }
             
-            // Se você tiver um gráfico, pode chamar a função de recarregá-lo aqui também
+            // ✅ ATUALIZA O GRÁFICO
+            if (typeof recarregarGraficoDoDashboard === 'function') {
+                recarregarGraficoDoDashboard();
+            }
 
         } catch (error) {
             console.error('Erro ao atualizar status da campanha:', error);

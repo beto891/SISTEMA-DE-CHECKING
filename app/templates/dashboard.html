@@ -352,50 +352,71 @@
 
 
 <script>
-    const labels = {{ labels | tojson }};
-    const valores = {{ valores | tojson }};
-    const registros = {{ registros | tojson }};
+    // 1. Crie uma variável global para guardar a instância do gráfico
+    let meuGrafico;
 
-    console.log('Dados de Campanhas Recebidos:', registros);
+    /**
+     * ✅ NOVA FUNÇÃO
+     * Busca os dados mais recentes da API e atualiza o gráfico.
+     */
+    async function recarregarGraficoDoDashboard() {
+        try {
+            const response = await fetch('/api/dashboard/chart-data');
+            const data = await response.json();
 
-    // Lógica para o gráfico (mantida inalterada)
-    const campanhasAtivas = valores.filter(v => v >= 10).length;
-    const totalCampanhas = valores.length;
-    new Chart(document.getElementById('graficoCampanhas'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: '% de cobertura',
-                data: valores,
-                backgroundColor: valores.map(v => v >= 100 ? '#28a745' : '#dc3545')
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`,
-                    font: {
-                        size: 16,
-                        weight: 'bold'
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ctx.raw + '% completo'
-                    }
-                }
+            // Pega os novos dados
+            const newLabels = data.labels;
+            const newValores = data.valores;
+
+            // Calcula o novo título
+            const campanhasAtivas = newValores.filter(v => v >= 10).length;
+            const totalCampanhas = newValores.length;
+            const newTitle = `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`;
+            
+            // Se o gráfico ainda não existe, cria ele
+            if (!meuGrafico) {
+                meuGrafico = new Chart(document.getElementById('graficoCampanhas'), {
+                    type: 'bar',
+                    data: {
+                        labels: newLabels,
+                        datasets: [{
+                            label: '% de cobertura',
+                            data: newValores,
+                            backgroundColor: newValores.map(v => v >= 100 ? '#28a745' : '#dc3545')
+                        }]
+                    },
+                    options: { /* ... suas opções ... */ }
+                });
+            } else {
+                // Se o gráfico JÁ EXISTE, apenas atualiza os dados
+                meuGrafico.data.labels = newLabels;
+                meuGrafico.data.datasets[0].data = newValores;
+                meuGrafico.data.datasets[0].backgroundColor = newValores.map(v => v >= 100 ? '#28a745' : '#dc3545');
+                meuGrafico.options.plugins.title.text = newTitle;
+                meuGrafico.update(); // O comando mágico para redesenhar!
             }
+        } catch (error) {
+            console.error("Erro ao recarregar o gráfico:", error);
         }
-    });
+    }
 
+    // 2. No seu outro arquivo JS (func_dashboard.js), modifique o evento do checkbox:
+    // Adicione a chamada para a nova função
+    /*
+        $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
+            // ... sua lógica de fetch para a API de status ...
+            
+            // Após o sucesso:
+            showBootstrapAlert(data.mensagem, 'success');
+            recarregarMapaComCampanhasAtivas();
+            recarregarGraficoDoDashboard(); // <<< ADICIONE ESTA LINHA
+        });
+    */
+
+    // 3. Garante que o gráfico seja carregado na primeira vez
+    $(document).ready(function() {
+        recarregarGraficoDoDashboard();
+    });
 </script>
 
 </body>
