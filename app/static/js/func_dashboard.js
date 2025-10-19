@@ -343,34 +343,57 @@ $(document).ready(function() {
     /**
      * ✅ NOVO: Gerenciador de mudança para o checkbox de status da campanha.
      */
+    // Cole este código dentro do seu $(document).ready(function() { ... });
+
+    /**
+     * ✅ VERSÃO CORRIGIDA
+     * Gerenciador de mudança para o checkbox de status da campanha.
+     * Agora atualiza TODAS as entradas da campanha pelo NOME.
+     */
     $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
+        // 1. Pega o NOME da campanha, e não mais o ID
         const checkbox = $(this);
-        const campanhaId = checkbox.data('id');
+        const campanhaNome = checkbox.data('nome');
         const isConcluida = checkbox.is(':checked');
 
+        // Validação para garantir que o nome foi pego
+        if (!campanhaNome) {
+            showBootstrapAlert('Erro: Não foi possível identificar a campanha.', 'danger');
+            return;
+        }
+
         try {
-            const response = await fetch(`/api/campaign/${campanhaId}/status`, {
+            // 2. Chama a NOVA rota da API
+            const response = await fetch(`/api/campaign/status-by-name`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ concluida: isConcluida })
+                // 3. Envia o NOME da campanha junto com o status
+                body: JSON.stringify({ nome: campanhaNome, concluida: isConcluida })
             });
+
             const data = await response.json();
-            if (!response.ok) throw new Error(data.mensagem);
+
+            if (!response.ok) {
+                throw new Error(data.mensagem || 'Erro ao atualizar status.');
+            }
 
             showBootstrapAlert(data.mensagem, 'success');
 
-            // Atualiza o mapa e outros componentes do dashboard
+            // Atualiza o mapa para refletir a mudança (remover/adicionar pontos)
             if (typeof recarregarMapaComCampanhasAtivas === 'function') {
                 recarregarMapaComCampanhasAtivas();
             }
+            
+            // Se você tiver um gráfico, pode chamar a função de recarregá-lo aqui também
 
         } catch (error) {
-            console.error('Erro ao atualizar status:', error);
+            console.error('Erro ao atualizar status da campanha:', error);
             showBootstrapAlert(error.message, 'danger');
-            checkbox.prop('checked', !isConcluida); // Desfaz a ação
+            
+            // Desfaz a ação do usuário no checkbox se a API falhar
+            checkbox.prop('checked', !isConcluida);
         }
     });
-
 
     // --- GERENCIADORES DE CLIQUES PARA MODAIS E GALERIA ---
 

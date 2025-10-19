@@ -318,3 +318,37 @@ def atualizar_status_campanha(campanha_id):
     except Exception as e:
         current_app.logger.error(f"Erro ao atualizar status da campanha {campanha_id}: {e}")
         return jsonify(success=False, mensagem="Erro interno ao atualizar status."), 500
+    
+    # Em app/routes/campaign.py
+
+@campaign_bp.route('/status-by-name', methods=['PUT'])
+@login_required
+def atualizar_status_por_nome():
+    """Atualiza o status de conclusão de TODAS as linhas de uma campanha pelo nome."""
+    data = request.get_json()
+    nome_campanha = data.get('nome')
+    novo_status = data.get('concluida')
+
+    if not nome_campanha or novo_status is None:
+        return jsonify(success=False, mensagem="Nome da campanha e status são obrigatórios."), 400
+
+    try:
+        with get_db_connection() as conn:
+            # A chave da solução está aqui: WHERE nome = :nome
+            cursor = conn.execute(
+                text("UPDATE campanhas SET concluida = :status WHERE nome = :nome"),
+                {"status": novo_status, "nome": nome_campanha}
+            )
+            
+            if cursor.rowcount == 0:
+                # Isso não é necessariamente um erro, pode ser que a campanha não exista mais
+                # mas é bom registrar.
+                current_app.logger.warning(f"Nenhuma campanha encontrada com o nome '{nome_campanha}' para atualizar o status.")
+            
+            conn.commit()
+            mensagem = f"Campanha '{nome_campanha}' marcada como concluída." if novo_status else f"Campanha '{nome_campanha}' reativada."
+            return jsonify(success=True, mensagem=mensagem)
+
+    except Exception as e:
+        current_app.logger.error(f"Erro ao atualizar status da campanha '{nome_campanha}': {e}")
+        return jsonify(success=False, mensagem="Erro interno ao atualizar status."), 500

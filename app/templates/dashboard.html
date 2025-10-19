@@ -138,10 +138,10 @@
 
         <td>
             <div class="custom-control custom-switch">
-                <input type="checkbox" 
-                       class="custom-control-input campaign-status-checkbox" 
-                       id="status-{{ r.id }}" 
-                       data-id="{{ r.id }}"
+                    <input type="checkbox" 
+                        class="custom-control-input campaign-status-checkbox" 
+                        id="status-{{ r.id }}" 
+                        data-id="{{ r.id }}"  data-nome="{{ r.campanha }}"
                        {% if r.concluida %}checked{% endif %}>
                 <label class="custom-control-label" for="status-{{ r.id }}"></label>
             </div>
