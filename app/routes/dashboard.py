@@ -36,7 +36,7 @@ def dashboard():
         SELECT
             c.nome AS campanha,
             c.data_criacao,
-            c.concluida,  -- ✅ 1. SELECIONA A NOVA COLUNA
+            c.concluida,
             MIN(c.id) AS id,
             COUNT(DISTINCT c.cod) AS total_espacos,
             COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
@@ -47,15 +47,30 @@ def dashboard():
         GROUP BY
             c.nome,
             c.data_criacao,
-            c.concluida   -- ✅ 2. ADICIONA AO GROUP BY
+            c.concluida
         ORDER BY c.nome
     """)).fetchall()
 
-    # As outras queries permanecem iguais...
-    espacos_por_campanha = conn.execute(text(""" ... """))
-    imagens_por_espaco = conn.execute(text(""" ... """))
+    # Query 2 (espacos_por_campanha) - RESTAURADA
+    espacos_por_campanha = conn.execute(text("""
+        SELECT c.nome AS campanha, c.cod AS espaco_nome
+        FROM campanhas c
+        JOIN campanhas_imagens i ON i.campanha_id = c.id
+        WHERE i.imagem_path IS NOT NULL
+    """)).fetchall()
+
+    # Query 3 (imagens_por_espaco) - RESTAURADA
+    imagens_por_espaco = conn.execute(text("""
+        SELECT c.nome AS campanha, c.cod AS espaco, i.imagem_path
+        FROM campanhas c
+        JOIN campanhas_imagens i ON i.campanha_id = c.id
+        WHERE i.imagem_path IS NOT NULL
+        ORDER BY c.nome, c.cod, i.id
+    """)).fetchall()
+
     conn.close()
 
+    # O resto da sua lógica de processamento de dados permanece igual
     resultados_dicts = [dict(row._mapping) for row in resultados]
     espacos_por_campanha_dicts = [dict(row._mapping) for row in espacos_por_campanha]
     imagens_por_espaco_dicts = [dict(row._mapping) for row in imagens_por_espaco]
@@ -66,17 +81,14 @@ def dashboard():
 
     imagens_dict = {}
     for row in imagens_por_espaco_dicts:
-        # ... (lógica existente)
         imagens_dict.setdefault(row["campanha"], {}).setdefault(row["espaco"], []).append(row["imagem_path"])
 
     registros, labels, valores = [], [], []
-
     for row in resultados_dicts:
         campanha = row["campanha"]
         total = row["total_espacos"]
         com_imagem = row["espacos_com_imagem"]
         percentual = round((com_imagem / total) * 100, 2) if total > 0 else 0
-
         labels.append(campanha)
         valores.append(percentual)
         espaco_destaque = espacos_dict.get(campanha, [None])[0]
@@ -92,7 +104,7 @@ def dashboard():
             "meta": percentual >= 10,
             "espacos_com_imagem_lista": espacos_dict.get(campanha, []),
             "imagens_por_espaco": imagens_dict.get(campanha, {}),
-            "concluida": row["concluida"]  # ✅ 3. PASSA O VALOR PARA O TEMPLATE
+            "concluida": row["concluida"]
         })
 
     return render_template(

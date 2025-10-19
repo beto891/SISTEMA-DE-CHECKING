@@ -129,8 +129,14 @@ function recarregarMapaComCampanhasAtivas() {
                     `<a href="#" class="btn-upload-campanha" data-campanha-cod="${c.cod}" data-campanha-nome="${c.nome}" style="${linkStyle}">${c.nome}</a>`
                 ).join("");
                 const espacosHtml = Array.from(item.codigos).join(', ') || 'N/A';
-                const popupContent = `...`; // Seu HTML do popup
-                const popupOptions = { maxWidth: 400, minWidth: 280 };
+                const popupContent = `
+                                    <div class="popup-grande" style="white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2;">
+                                        <strong>Espaço:</strong> ${espacosHtml}<br>
+                                        <strong style="margin-top: 10px; display: inline-block;">Campanhas:</strong><br>
+                                        ${campanhasHtml}
+                                    </div>
+                                `; // Seu HTML do popup
+                const popupOptions = { maxWidth: 500, minWidth: 280 };
                 const marker = L.marker([item.latitude, item.longitude]).bindPopup(popupContent, popupOptions);
 
                 item.nomes.forEach(c => {
