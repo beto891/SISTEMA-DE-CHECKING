@@ -99,7 +99,7 @@
                 <th>Concluída</th>
             </tr>
         </thead>
-        <tbody id="tabelaCampanhas">
+       <tbody id="tabelaCampanhas">
     {% for r in registros %}
     <tr>
         <td>{{ r.campanha }}</td>
@@ -109,17 +109,31 @@
         <td>
             {% if r.meta %} ✅ Meta atingida {% else %} ⚠️ Abaixo da meta {% endif %}
         </td>
+        
         <td>
             <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}">
                 <i class="fas fa-file-pdf"></i> Gerar PDF
             </button>
+            
             <button class="btn btn-sm btn-dark btn-galeria" 
                     data-id="{{ r.id }}" 
                     data-nome="{{ r.campanha }}">
                 <i class="fas fa-images"></i> Galeria
             </button>
+
             <div class="dropdown d-inline">
+                <button class="btn btn-sm" type="button" data-toggle="dropdown" style="background: transparent; border: none;">
+                    <i class="fas fa-ellipsis-v text-dark"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <button class="dropdown-item btn-editar-campanha" data-id="{{ r.id }}">
+                        <i class="fas fa-edit mr-2"></i> Editar
+                    </button>
+                    <button class="dropdown-item btn-excluir-campanha" data-id="{{ r.id }}" data-nome="{{ r.campanha }}">
+                        <i class="fas fa-trash mr-2"></i> Excluir
+                    </button>
                 </div>
+            </div>
         </td>
 
         <td>
