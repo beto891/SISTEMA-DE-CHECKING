@@ -165,9 +165,16 @@ function abrirFormularioUpload(campanhaCod, campanhaNome) {
 }
 
 /**
+ * ✅ VERSÃO CORRIGIDA
  * Normaliza uma string removendo acentos e convertendo para minúsculas.
  */
 function normalizar(texto) {
+    // Garante que o texto é uma string antes de tentar normalizar
+    if (typeof texto !== 'string') {
+        return '';
+    }
+    // O método normalize("NFD") separa os caracteres dos seus acentos,
+    // e a expressão regular /[\u0300-\u036f]/g remove esses acentos.
     return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
