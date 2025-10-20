@@ -1,204 +1,395 @@
-// Verifica se o elemento do mapa existe antes de inicializar o Leaflet
-if (document.getElementById('map')) {
-    const map = L.map('map', {
-        center: [-23.5505, -46.6333],
-        zoom: 5,
-        minZoom: 3
-    });
+/**
+ * =================================================================
+ * SCRIPT CONSOLIDADO PARA O MAPA E DASHBOARD
+ * @version 7.1 (Estrutura Corrigida e Completa)
+ * @description Define todas as funções e depois anexa os eventos
+ * para garantir o escopo correto e a funcionalidade.
+ * =================================================================
+ */
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+// --------------------------------------------------
+// 1. VARIÁVEIS GLOBAIS
+// --------------------------------------------------
+let map;
+let clusterGroup;
+const campaignMarkers = {};
 
-    const clusterGroup = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        iconCreateFunction: function (cluster) {
-            let totalCampanhas = 0;
-            cluster.getAllChildMarkers().forEach(marker => {
-                totalCampanhas += marker.options.campanhasCount || 1;
+// --------------------------------------------------
+// 2. DEFINIÇÃO DE TODAS AS FUNÇÕES
+// --------------------------------------------------
+
+/**
+ * Exibe uma notificação de Bootstrap que desaparece sozinha.
+ */
+function showBootstrapAlert(message, type = 'success', duration = 4000) {
+    const container = document.getElementById('notification-container');
+    if (!container) {
+        console.error('Container de notificação #notification-container não encontrado.');
+        alert(message);
+        return;
+    }
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    container.appendChild(alertDiv);
+    const bsAlert = new bootstrap.Alert(alertDiv);
+    setTimeout(() => {
+        bsAlert.close();
+    }, duration);
+}
+
+/**
+ * Busca e exibe as localizações dos usuários no mapa.
+ */
+function fetchAndDisplayUserLocations() {
+    fetch('/api/user-locations')
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao buscar localizações de usuários.');
+            return response.json();
+        })
+        .then(locations => {
+            locations.forEach(location => {
+                const marker = L.marker([location.latitude, location.longitude])
+                    .bindPopup(`
+                        <div class="popup-location">
+                            <strong>Usuário ID:</strong> ${location.user_id}<br>
+                            <strong>Latitude:</strong> ${location.latitude}<br>
+                            <strong>Longitude:</strong> ${location.longitude}<br>
+                            <strong>Última atualização:</strong> ${new Date(location.timestamp).toLocaleString()}
+                        </div>
+                    `);
+                if (clusterGroup) {
+                    clusterGroup.addLayer(marker);
+                }
             });
+        })
+        .catch(error => console.error('Erro ao carregar localizações de usuários:', error));
+}
+
+/**
+ * ✅ FUNÇÃO RENOMEADA E MODIFICADA
+ * Busca os dados de TODAS as campanhas, filtra as ativas e exibe no mapa.
+ */
+function recarregarMapaComCampanhasAtivas() {
+    fetch('/api/campaign/mapa-dados')
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao buscar dados das campanhas.');
+            return response.json();
+        })
+        .then(todasAsCampanhas => {
+            if (!clusterGroup) return;
             
-            let color = 'rgb(255, 255, 0)'; // Amarelo
-            if (totalCampanhas > 10) {
-                color = 'rgb(255, 0, 0)'; // Vermelho
-            } else if (totalCampanhas > 5) {
-                color = 'rgb(255, 140, 0)'; // Laranja
+            // Filtra campanhas marcadas como concluídas
+            const campanhasAtivas = todasAsCampanhas.filter(campanha => !campanha.concluida);
+
+            // Limpa as camadas antigas do mapa
+            clusterGroup.clearLayers();
+            for (const key in campaignMarkers) {
+                delete campaignMarkers[key];
             }
-            return L.divIcon({
-                html: `<div style="background-color:${color}" class="marker-cluster-small">${totalCampanhas}</div>`,
-                className: '',
-                iconSize: [50, 50]
-            });
-        }
-    });
 
-    // Função para buscar e exibir as localizações dos usuários
-    function fetchAndDisplayUserLocations() {
-        fetch('/api/user-locations')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao buscar localizações de usuários.');
+            const agrupadas = {};
+            campanhasAtivas.forEach(campanha => {
+                const key = `${campanha.latitude},${campanha.longitude}`;
+                if (!agrupadas[key]) {
+                    agrupadas[key] = {
+                        latitude: campanha.latitude,
+                        longitude: campanha.longitude,
+                        codigos: new Set(),
+                        nomes: []
+                    };
                 }
-                return response.json();
-            })
-            .then(locations => {
-                locations.forEach(location => {
-                    const marker = L.marker([location.latitude, location.longitude])
-                        .bindPopup(`
-                            <div class="popup-location">
-                                <strong>Usuário ID:</strong> ${location.user_id}<br>
-                                <strong>Latitude:</strong> ${location.latitude}<br>
-                                <strong>Longitude:</strong> ${location.longitude}<br>
-                                <strong>Última atualização:</strong> ${new Date(location.timestamp).toLocaleString()}
-                            </div>
-                        `);
-                    clusterGroup.addLayer(marker);
-                });
-                map.addLayer(clusterGroup);
-            })
-            .catch(error => {
-                console.error('Erro ao carregar localizações de usuários:', error);
-            });
-    }
-
-    // Função para buscar e exibir os pontos das campanhas com links
-    function fetchAndDisplayCampaigns() {
-        fetch('/api/campaign/mapa-dados')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro ao buscar dados das campanhas.');
+                agrupadas[key].codigos.add(campanha.cod);
+                const campanhaJaAdicionada = agrupadas[key].nomes.some(c => c.nome === campanha.nome);
+                if (!campanhaJaAdicionada) {
+                    agrupadas[key].nomes.push({
+                        id: campanha.id,
+                        nome: campanha.nome,
+                        cod: campanha.cod
+                    });
                 }
-                return response.json();
-            })
-            .then(campanhas => {
-                const agrupadas = {};
-                campanhas.forEach(campanha => {
-                    const key = `${campanha.latitude},${campanha.longitude}`;
-                    if (!agrupadas[key]) {
-                        agrupadas[key] = {
-                            latitude: campanha.latitude,
-                            longitude: campanha.longitude,
-                            codigos: new Set(),
-                            nomes: [],
-                            nomeEspaco: campanha.nome
-                        };
-                    }
-                    agrupadas[key].codigos.add(campanha.cod);
-                    const campanhaJaAdicionada = agrupadas[key].nomes.some(c => c.nome === campanha.nome);
-                    if (!campanhaJaAdicionada) {
-                         agrupadas[key].nomes.push({
-                            id: campanha.id,
-                            nome: campanha.nome
-                        });
-                    }
-                });
-
-                Object.values(agrupadas).forEach(item => {
-                    const campanhasHtml = item.nomes.map(c => 
-                        `<a href="#" onclick="abrirFormularioUpload('${c.id}', '${c.nome}')">${c.nome}</a>`
-                    ).join("<br>");
-
-                    const marker = L.marker([item.latitude, item.longitude])
-                        .bindPopup(
-                            `<div class="popup-grande">
-                                <strong>Espaços:</strong> ${item.nomeEspaco}<br> 
-                                <strong>Campanhas:</strong><br>${campanhasHtml}
-                            </div>`
-                        );
-                    marker.options.espacoCod = Array.from(item.codigos).join(', ');
-                    marker.options.campanhas = item.nomes;
-                    marker.options.campanhasCount = item.nomes.length;
-                    clusterGroup.addLayer(marker);
-                });
-                map.addLayer(clusterGroup);
-            })
-            .catch(error => {
-                console.error('Erro ao carregar campanhas:', error);
             });
-    }
 
-    // Função para lidar com o clique no link de upload
-    function abrirFormularioUpload(campanhaId, campanhaNome) {
-        const modal = new bootstrap.Modal(document.getElementById('uploadModal'));
-        document.getElementById('campanhaIdInput').value = campanhaId;
+            Object.values(agrupadas).forEach(item => {
+                const campanhasHtml = item.nomes.map(c =>
+                    `<a href="#" class="btn-upload-campanha" data-campanha-cod="${c.cod}" data-campanha-nome="${c.nome}">${c.nome}</a>`
+                ).join("<br>");
+
+                const espacosHtml = Array.from(item.codigos).join(', ') || 'N/A';
+
+                const popupContent = `
+                    <div class="popup-grande" style="white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2;">
+                        <strong>Espaços:</strong> ${espacosHtml}<br>
+                        <strong style="margin-top: 10px; display: inline-block;">Campanhas:</strong><br>
+                        ${campanhasHtml}
+                    </div>
+                `;
+                const popupOptions = { maxWidth: 500, minWidth: 280 };
+                const marker = L.marker([item.latitude, item.longitude]).bindPopup(popupContent, popupOptions);
+
+                item.nomes.forEach(c => {
+                    if (c.id) campaignMarkers[c.id] = marker;
+                });
+                
+                marker.options.espacoCod = Array.from(item.codigos).join(', ');
+                marker.options.campanhas = item.nomes;
+                marker.options.campanhasCount = item.nomes.length;
+                clusterGroup.addLayer(marker);
+            });
+            map.addLayer(clusterGroup);
+        })
+        .catch(error => console.error('Erro ao carregar campanhas:', error));
+}
+
+/**
+ * Abre o modal de upload para uma campanha específica.
+ */
+function abrirFormularioUpload(campanhaCod, campanhaNome) {
+    const uploadModalEl = document.getElementById('uploadModal');
+    if (uploadModalEl) {
+        const uploadModal = new bootstrap.Modal(uploadModalEl);
+        uploadModal.show();
+        document.getElementById('campanhaIdInput').value = campanhaCod;
         document.getElementById('campanhaNomeLabel').innerText = `Upload para a campanha: ${campanhaNome}`;
-        modal.show();
     }
-    
-    window.abrirFormularioUpload = abrirFormularioUpload;
+}
 
-    // Funções de busca
-    // 🔧 Função para normalizar texto (remove acentos e espaço extra)
-    function normalizar(texto) {
-        return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    }
+/**
+ * Normaliza uma string removendo acentos e convertendo para minúsculas.
+ */
+function normalizar(texto) {
+    if (typeof texto !== 'string') return '';
+    return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 
-    // 🎯 Função principal para buscar no mapa
-    function buscarNoMapa(termo) {
-        const termoNormalizado = normalizar(termo);
-        let encontrado = null;
+/**
+ * Realiza a busca no mapa com base em um termo.
+ */
+function buscarNoMapa(termo) {
+    const termoNormalizado = normalizar(termo);
+    let encontrado = null;
 
+    if (clusterGroup) {
         clusterGroup.eachLayer(layer => {
             const cod = normalizar(layer.options.espacoCod || '');
             const campanhas = (layer.options.campanhas || []).map(n => normalizar(n.nome));
-            const porCod = cod.includes(termoNormalizado);
-            const porCampanha = campanhas.some(n => n.includes(termoNormalizado));
-
-            if (porCod || porCampanha) {
+            if (cod.includes(termoNormalizado) || campanhas.some(n => n.includes(termoNormalizado))) {
                 encontrado = layer;
             }
         });
-
-        if (encontrado) {
-            const latlng = encontrado.getLatLng();
-            map.setView(latlng, 11);
-            ajustarLayoutAposZoom();
-
-            clusterGroup.zoomToShowLayer(encontrado, () => {
-                encontrado.openPopup();
-                ajustarLayoutAposZoom();
-            });
-        } else {
-            alert("Nenhum ponto encontrado para: " + termo);
-        }
     }
 
-    // ✅ CORREÇÃO AQUI: o ID correto da barra de pesquisa é `campoBuscaCampanha`
-    const campoBusca = document.getElementById('campoBuscaCampanha');
+    if (encontrado) {
+        const latlng = encontrado.getLatLng();
+        map.setView(latlng, 17);
+        ajustarLayoutAposZoom();
+        clusterGroup.zoomToShowLayer(encontrado, () => {
+            encontrado.openPopup();
+            ajustarLayoutAposZoom();
+        });
+    }
+}
+
+/**
+ * Ajusta o layout do mapa e elementos sobrepostos após o zoom.
+ */
+function ajustarLayoutAposZoom() {
+    setTimeout(() => {
+        if (map) map.invalidateSize();
+        const card = document.querySelector('.card');
+        if (card) {
+            card.style.top = '80px';
+            card.style.right = '20px';
+        }
+    }, 400);
+}
+
+
+// --------------------------------------------------
+// 3. ANEXAR OS OUVINTES DE EVENTOS (GATILHOS)
+// --------------------------------------------------
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM totalmente carregado. Anexando todos os ouvintes de evento...");
+
+    // --- Inicialização do Mapa Leaflet ---
+    if (document.getElementById('map')) {
+        map = L.map('map', { center: [-23.5505, -46.6333], zoom: 5, minZoom: 3 });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        clusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 80, // Aumentado para agrupar mais agressivamente
+            iconCreateFunction: function(cluster) {
+                let totalCampanhas = 0;
+                cluster.getAllChildMarkers().forEach(marker => {
+                    totalCampanhas += marker.options.campanhasCount || 1;
+                });
+                let color = totalCampanhas > 10 ? 'rgb(255, 0, 0)' : totalCampanhas > 5 ? 'rgb(255, 140, 0)' : 'rgb(255, 255, 0)';
+                return L.divIcon({
+                    html: `<div style="background-color:${color}" class="marker-cluster-small">${totalCampanhas}</div>`,
+                    className: '',
+                    iconSize: [50, 50]
+                });
+            }
+        });
+
+        map.on('popupopen', function(e) {
+            const popup = e.popup.getElement();
+            // Usando jQuery para delegação de evento, já que a página carrega jQuery
+            $(popup).on('click', '.btn-upload-campanha', function(event) {
+                event.preventDefault();
+                abrirFormularioUpload(event.currentTarget.dataset.campanhaCod, event.currentTarget.dataset.campanhaNome);
+            });
+        });
+
+        map.on('zoomend', ajustarLayoutAposZoom);
+
+        // ✅ CORREÇÃO 1: Chamando a função com o nome correto na inicialização
+        recarregarMapaComCampanhasAtivas();
+        fetchAndDisplayUserLocations();
+    }
+
+    // --- Ouvinte de Evento para o Campo de Busca do Mapa ---
+    const campoBusca = document.getElementById('campoBuscaMapa');
     if (campoBusca) {
         campoBusca.addEventListener('input', () => {
             const valor = campoBusca.value.trim();
             if (valor.length >= 2) {
                 buscarNoMapa(valor);
             } else {
-                map.setView([-23.5505, -46.6333], 5);
-                map.closePopup();
+                if (map) {
+                    map.setView([-23.5505, -46.6333], 5);
+                    map.closePopup();
+                }
                 ajustarLayoutAposZoom();
             }
         });
     }
 
-    // Outras funções (mantidas)
-    function ajustarLayoutAposZoom() {
-        setTimeout(() => {
-            map.invalidateSize();
-            const card = document.querySelector('.card');
-            if (card) {
-                card.style.top = '80px';
-                card.style.right = '20px';
+    // --- Ouvinte de Evento para o Botão de Upload de Foto (dentro do modal) ---
+    const uploadBtn = document.getElementById('uploadBtn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('imagemFile');
+            if (fileInput.files.length === 0) {
+                showBootstrapAlert('Por favor, selecione uma imagem para enviar.', 'warning');
+                return;
             }
-        }, 400);
+
+            const campanhaId = document.getElementById('campanhaIdInput').value;
+            const campanhaNome = document.getElementById('campanhaNomeLabel').innerText.replace('Upload para a campanha: ', '');
+            if (!campanhaId || !campanhaNome) {
+                showBootstrapAlert('Erro: O código ou nome da campanha não foi encontrado.', 'danger');
+                return;
+            }
+
+            const uploadBtnText = document.getElementById('uploadBtnText');
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            uploadBtnText.textContent = 'Enviando...';
+            uploadSpinner.classList.remove('d-none');
+            uploadBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('cod', campanhaId);
+            formData.append('nome', campanhaNome);
+
+            for (const file of fileInput.files) {
+                formData.append('imagem', file);
+            }
+
+            fetch('/api/upload/foto', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showBootstrapAlert('Upload realizado com sucesso!');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+                    if (modal) modal.hide();
+                } else {
+                    showBootstrapAlert(`Erro no upload: ${data.mensagem}`, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Erro de rede:', error);
+                showBootstrapAlert('Erro de rede ao tentar fazer o upload.', 'danger');
+            })
+            .finally(() => {
+                uploadBtnText.innerHTML = '<i class="bi bi-cloud-upload-fill me-1"></i> Enviar';
+                uploadSpinner.classList.add('d-none');
+                uploadBtn.disabled = false;
+                $('#imagemFile').val(null);
+            });
+        });
     }
-    
-    map.on('zoomend', ajustarLayoutAposZoom);
 
-    fetchAndDisplayCampaigns();
-    fetchAndDisplayUserLocations();
+    // --- Ouvinte de Evento para o Formulário de Importação de Planilha ---
+    // Usando jQuery pois o código original usava
+    $('#form-importar').on('submit', function(event) {
+        event.preventDefault();
 
-}
+        const form = this;
+        const fileInput = form.querySelector('#arquivo');
+        const alerta = document.getElementById('alerta-importacao');
 
-$(document).ready(function () {
+        if (fileInput.files.length === 0) {
+            alerta.innerHTML = `<div class="alert alert-danger" role="alert">Por favor, selecione uma planilha.</div>`;
+            return;
+        }
+
+        const submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importando...');
+
+        const formData = new FormData(form);
+
+        fetch('/api/importar-pontos', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) return response.json().then(err => { throw new Error(err.mensagem || 'Erro no servidor.') });
+            return response.json();
+        })
+        .then(data => {
+            const alertClass = data.success ? 'alert-success' : 'alert-danger';
+            alerta.innerHTML = `<div class="alert ${alertClass}" role="alert">${data.mensagem}</div>`;
+
+            if (data.success) {
+                console.log("SUCESSO NA IMPORTAÇÃO. Tentando atualizar o mapa...");
+                
+                // ✅ CORREÇÃO 2: Chamando a função com o nome correto após importar
+                recarregarMapaComCampanhasAtivas();
+
+                setTimeout(() => {
+                    location.reload(); // Recarrega a página para atualizar a tabela principal
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Erro na importação:', error);
+            alerta.innerHTML = `<div class="alert alert-danger" role="alert">Erro: ${error.message}</div>`;
+             setTimeout(() => {
+                location.reload();
+            }, 2000);
+        })
+        .finally(() => {
+            form.reset();
+            submitButton.prop('disabled', false).html('<i class="fas fa-upload mr-1"></i> Importar');
+        });
+    });
+
+    // --- Lógica para o Toast (se houver) ---
     setTimeout(function () {
         $('#toastImportar').toast('show');
-    }, 2000); // ⏱️ 2 segundos de atraso
+    }, 2000);
 });

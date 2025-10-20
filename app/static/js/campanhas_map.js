@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }).addTo(map);
 
         clusterGroup = L.markerClusterGroup({
-            maxClusterRadius: 55,
+            maxClusterRadius: 70,
             iconCreateFunction: function(cluster) {
                 let totalCampanhas = 0;
                 cluster.getAllChildMarkers().forEach(marker => {
