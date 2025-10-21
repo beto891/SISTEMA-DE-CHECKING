@@ -197,14 +197,14 @@ def listar_campanhas():
 @campaign_bp.route('/importar-campanhas', methods=['POST'])
 @login_required
 def importar_campanhas():
-    # ESPİÃO DO POSSÍVEL CULPADO
-    print("\n❌❌❌ ALERTA: ROTA DE IMPORTAR CAMPANHAS FOI ACIONADA PELA EDIÇÃO! --- ERRO DE ROTEAMENTO --- ❌❌❌\n") 
+    
     logger.info("🔄 Iniciando importação de campanhas")
     arquivo = request.files.get('arquivo')
-    if not arquivo:
-        return jsonify({"success": False, "mensagem": "Nenhum arquivo enviado"}), 400
+    if not arquivo or not arquivo.filename: # Verifica se existe E se tem nome de arquivo
+        return jsonify({"success": False, "mensagem": "Nenhum arquivo válido enviado"}), 400
 
     try:
+        # O resto do seu código continua aqui...
         if arquivo.filename.lower().endswith('.csv'):
             df = pd.read_csv(arquivo)
         elif arquivo.filename.lower().endswith(('.xls', '.xlsx')):
