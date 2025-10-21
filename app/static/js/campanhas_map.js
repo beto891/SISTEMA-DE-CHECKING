@@ -347,66 +347,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Ouvinte de Evento para o Formulário de Importação de Planilha ---
-$('#form-importar').off('submit').on('submit', function(event) {
-    event.preventDefault();
+//     // --- Ouvinte de Evento para o Formulário de Importação de Planilha ---
+// $('#form-importar').off('submit').on('submit', function(event) {
+//     event.preventDefault();
     
-    const form = this; // Guarda a referência do formulário
-    const fileInput = form.querySelector('#arquivo');
-    const alerta = document.getElementById('alerta-importacao');
+//     const form = this; // Guarda a referência do formulário
+//     const fileInput = form.querySelector('#arquivo');
+//     const alerta = document.getElementById('alerta-importacao');
     
-    if (fileInput.files.length === 0) {
-        alerta.innerHTML = `<div class="alert alert-danger" role="alert">Por favor, selecione uma planilha.</div>`;
-        return;
-    }
+//     if (fileInput.files.length === 0) {
+//         alerta.innerHTML = `<div class="alert alert-danger" role="alert">Por favor, selecione uma planilha.</div>`;
+//         return;
+//     }
     
-    // Opcional: Adicionar um estado de "carregando" no botão de importar
-    const submitButton = $(this).find('button[type="submit"]');
-    submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importando...');
+//     // Opcional: Adicionar um estado de "carregando" no botão de importar
+//     const submitButton = $(this).find('button[type="submit"]');
+//     submitButton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Importando...');
 
-    const formData = new FormData(form);
+//     const formData = new FormData(form);
 
-    fetch('/api/importar-pontos', { 
-        method: 'POST', 
-        body: formData 
-    })
-    .then(response => {
-        if (!response.ok) return response.json().then(err => { throw new Error(err.mensagem || 'Erro no servidor.') });
-        return response.json();
-    })
-    .then(data => {
-        const alertClass = data.success ? 'alert-success' : 'alert-danger';
-        alerta.innerHTML = `<div class="alert ${alertClass}" role="alert">${data.mensagem}</div>`;
+//     fetch('/api/importar-pontos', { 
+//         method: 'POST', 
+//         body: formData 
+//     })
+//     .then(response => {
+//         if (!response.ok) return response.json().then(err => { throw new Error(err.mensagem || 'Erro no servidor.') });
+//         return response.json();
+//     })
+//     .then(data => {
+//         const alertClass = data.success ? 'alert-success' : 'alert-danger';
+//         alerta.innerHTML = `<div class="alert ${alertClass}" role="alert">${data.mensagem}</div>`;
         
-        if (data.success) {
-            // ✅ 1. ATUALIZA O MAPA (já estava aqui)
-            recarregarMapaComCampanhasAtivas(); // <<< CORRIGIDO
+//         if (data.success) {
+//             // ✅ 1. ATUALIZA O MAPA (já estava aqui)
+//             recarregarMapaComCampanhasAtivas(); // <<< CORRIGIDO
 
-            // ✅ PONTO DE VERIFICAÇÃO:
-            console.log("SUCESSO NA IMPORTAÇÃO. Tentando atualizar o mapa...");
+//             // ✅ PONTO DE VERIFICAÇÃO:
+//             console.log("SUCESSO NA IMPORTAÇÃO. Tentando atualizar o mapa...");
             
-            // ✅ 2. FECHA O MODAL APÓS UM ATRASO
-            // Damos 2 segundos para o usuário ler a mensagem de sucesso.
-            setTimeout(() => {
-                 location.reload();
-            }, 2000);
-        }
-    })
-    .catch(error => {
-        console.error('Erro na importação:', error);
-        alerta.innerHTML = `<div class="alert alert-danger" role="alert">Erro: ${error.message}</div>`;
+//             // ✅ 2. FECHA O MODAL APÓS UM ATRASO
+//             // Damos 2 segundos para o usuário ler a mensagem de sucesso.
+//             setTimeout(() => {
+//                  location.reload();
+//             }, 2000);
+//         }
+//     })
+//     .catch(error => {
+//         console.error('Erro na importação:', error);
+//         alerta.innerHTML = `<div class="alert alert-danger" role="alert">Erro: ${error.message}</div>`;
 
-        setTimeout(() => {
-                 location.reload();
-            }, 2000);
-    })
-    .finally(() => {
-        // ✅ 3. LIMPA O CAMPO DO ARQUIVO E RESTAURA O BOTÃO
-        // Isso será executado sempre, com sucesso ou erro.
-        form.reset(); // Limpa o input de arquivo e outros campos do formulário
-        submitButton.prop('disabled', false).html('<i class="fas fa-upload mr-1"></i> Importar');
-    });
-});
+//         setTimeout(() => {
+//                  location.reload();
+//             }, 2000);
+//     })
+//     .finally(() => {
+//         // ✅ 3. LIMPA O CAMPO DO ARQUIVO E RESTAURA O BOTÃO
+//         // Isso será executado sempre, com sucesso ou erro.
+//         form.reset(); // Limpa o input de arquivo e outros campos do formulário
+//         submitButton.prop('disabled', false).html('<i class="fas fa-upload mr-1"></i> Importar');
+//     });
+// });
 
     // --- Lógica para o Toast (se houver) ---
     // Usando jQuery se a página o tiver
