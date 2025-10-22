@@ -385,8 +385,29 @@
                             backgroundColor: newValores.map(v => v >= 100 ? '#28a745' : '#dc3545')
                         }]
                     },
-                    options: { /* ... suas opções ... */ }
-                });
+                    options: {  scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`,
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.raw + '% completo'
+                    }
+                }
+            }
+        } });
+        
             } else {
                 // Se o gráfico JÁ EXISTE, apenas atualiza os dados
                 meuGrafico.data.labels = newLabels;

@@ -288,13 +288,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadBtn = document.getElementById('uploadBtn');
     if (uploadBtn) {
 
-        // ✅ LOG 1: Antes de anexar o evento
-        console.log('Tentando anexar evento ao uploadBtn...');
+        // ✅ LOG 1: Antes de anexar o evento (pode remover se não precisar mais)
+        console.log('Tentando anexar evento ao uploadBtn...'); 
 
         uploadBtn.addEventListener('click', function(event) {
 
-            // ✅ LOG 2: Evento de clique acionado
-            console.log('Evento de clique no uploadBtn acionado.');
+            // ✅ LOG 2: Evento de clique acionado (pode remover se não precisar mais)
+            console.log('Evento de clique no uploadBtn acionado.'); 
 
             event.preventDefault();
             const fileInput = document.getElementById('imagemFile');
@@ -304,8 +304,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const campanhaId = document.getElementById('campanhaIdInput').value;
+            // Corrigido para pegar o 'cod' em vez do 'id' se necessário, ajuste conforme o seu HTML
+            // const campanhaCod = document.getElementById('campanhaIdInput').value; 
             const campanhaNome = document.getElementById('campanhaNomeLabel').innerText.replace('Upload para a campanha: ', '');
-            if (!campanhaId || !campanhaNome) {
+            
+            // Ajuste aqui se campanhaId for na verdade o 'cod'
+            if (!campanhaId || !campanhaNome) { 
                 showBootstrapAlert('Erro: O código ou nome da campanha não foi encontrado.', 'danger');
                 return;
             }
@@ -317,7 +321,8 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadBtn.disabled = true;
 
             const formData = new FormData();
-            formData.append('cod', campanhaId);
+            // Garanta que está enviando 'cod' como esperado pela API /api/upload/foto
+            formData.append('cod', campanhaId); 
             formData.append('nome', campanhaNome);
 
             for (const file of fileInput.files) {
@@ -335,8 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     showBootstrapAlert('Upload realizado com sucesso!');
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
-                    if (modal) modal.hide();
+                    // ✅ CORREÇÃO AQUI: Usa jQuery para fechar o modal Bootstrap 4
+                    $('#uploadModal').modal('hide'); 
                 } else {
                     showBootstrapAlert(`Erro no upload: ${data.mensagem}`, 'danger');
                 }
@@ -354,7 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
 
 
     // --- Lógica para o Toast (se houver) ---
