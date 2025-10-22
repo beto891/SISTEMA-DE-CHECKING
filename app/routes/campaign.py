@@ -196,33 +196,42 @@ def listar_campanhas():
 
 # Em app/routes/campaign.py
 
+# Em app/routes/campaign.py
+
 @campaign_bp.route('/importar-campanhas', methods=['POST'])
 @login_required
 def importar_campanhas():
     logger.info("🔄 Iniciando importação de campanhas")
     arquivo = request.files.get('arquivo')
     
-    # Verificação robusta do arquivo (já estava correta)
+    # Verificação robusta do arquivo
     if not arquivo or not arquivo.filename: 
         return jsonify({"success": False, "mensagem": "Nenhum arquivo válido enviado"}), 400
 
     df = None # Inicializa df como None
     try:
-        # Tenta ler o arquivo
+        # Tenta ler o arquivo especificando o encoding para CSV
         if arquivo.filename.lower().endswith('.csv'):
-            df = pd.read_csv(arquivo)
+            # ✅ Adiciona encoding='latin-1' para CSV
+            df = pd.read_csv(arquivo, encoding='latin-1') 
         elif arquivo.filename.lower().endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(arquivo)
+            # Para Excel, o Pandas geralmente detecta bem, mas podemos tentar latin-1 se necessário.
+            # Se der erro AQUI por causa do encoding, remova o parâmetro desta linha.
+            df = pd.read_excel(arquivo) 
         else:
             return jsonify({"success": False, "mensagem": "Formato de arquivo não suportado"}), 400
             
-        # ✅ VERIFICA SE O DATAFRAME FOI CRIADO E NÃO ESTÁ VAZIO
+        # Verifica se o DataFrame foi criado e não está vazio
         if df is None or df.empty:
              return jsonify({"success": False, "mensagem": "Arquivo vazio ou inválido"}), 400
              
+    # ✅ Captura especificamente o erro de encoding
+    except UnicodeDecodeError: 
+         logger.error(f"❌ Falha de encoding ao ler o arquivo. Tente salvar como UTF-8.")
+         return jsonify({"success": False, "mensagem": "Erro de codificação no arquivo. Verifique se ele não contém caracteres inválidos ou tente salvá-lo como UTF-8."}), 400
     except Exception as e:
         logger.error(f"❌ Erro ao ler o arquivo da planilha: {e}")
-        # ✅ Retorna 400 se a leitura falhar, pois o problema é o arquivo
+        # Retorna 400 se a leitura falhar (problema no arquivo)
         return jsonify({"success": False, "mensagem": f"Erro ao processar o arquivo: {e}"}), 400 
 
     # Normaliza colunas APÓS garantir que df existe
@@ -232,9 +241,9 @@ def importar_campanhas():
     criadas = 0
     novas = []
 
-    # ✅ USA UM GERENCIADOR DE CONTEXTO PARA A CONEXÃO
+    # Usa um gerenciador de contexto para a conexão
     try:
-        with get_db_connection() as conn: # Garante que a conexão é fechada no final, mesmo com erros
+        with get_db_connection() as conn: # Garante que a conexão é fechada no final
             for i, row in df.iterrows():
                 linha_num = i + 2
                 cod = str(row.get('cod', '')).strip()
@@ -248,7 +257,7 @@ def importar_campanhas():
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                 try:
-                    # Verifica se já existe (USANDO A MESMA CONEXÃO 'conn')
+                    # Verifica se já existe
                     existe = conn.execute(
                         text("SELECT id FROM campanhas WHERE LOWER(cod) = :cod AND LOWER(nome) = :nome"), 
                         {"cod": cod.lower(), "nome": nome.lower()}
@@ -258,7 +267,7 @@ def importar_campanhas():
                         ignoradas += 1
                         continue
 
-                    # Insere o novo registro (USANDO A MESMA CONEXÃO 'conn')
+                    # Insere o novo registro
                     conn.execute(
                         text("INSERT INTO campanhas (cod, nome, latitude, longitude, data_criacao) VALUES (:cod, :nome, :lat, :lon, :ts)"),
                         {"cod": cod, "nome": nome, "lat": lat, "lon": lon, "ts": ts}
@@ -266,22 +275,20 @@ def importar_campanhas():
                     criadas += 1
                     novas.append({"cod": cod, "nome": nome, "latitude": lat, "longitude": lon})
                 
-                # ✅ CAPTURA ERROS *ESPECÍFICOS* DENTRO DO LOOP SEM FECHAR A CONEXÃO
                 except Exception as inner_e: 
                     logger.error(f"❌ Erro ao processar linha {linha_num} ({cod} - {nome}): {inner_e}")
-                    # Não precisamos mais de rollback aqui se o erro for pego antes do commit final
                     ignoradas += 1
                     continue # Pula para a próxima linha
 
-            # ✅ COMMIT SÓ ACONTECE NO FINAL, SE NENHUM ERRO GRAVE OCORREU
+            # Commit só acontece no final
             conn.commit() 
             
-    # ✅ CAPTURA ERROS GERAIS (Ex: Falha na conexão inicial)
     except Exception as e:
-        logger.error(f"❌ Erro GERAL durante a importação: {e}")
+        logger.error(f"❌ Erro GERAL durante a importação (conexão ou commit): {e}")
+        # Retorna 500 para erros inesperados de banco
         return jsonify({"success": False, "mensagem": f"Erro interno durante a importação: {e}"}), 500
         
-    # O código restante (emitir socketio, retornar JSON) continua igual...
+    # Código restante (emitir socketio, retornar JSON)
     logger.info(f"📦 Importação finalizada: {criadas} criadas, {ignoradas} ignoradas")
     if novas:
         socketio.emit('nova_campanha', {'tipo': 'nova_campanha', 'dados': novas})
