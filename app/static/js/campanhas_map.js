@@ -179,30 +179,100 @@ function normalizar(texto) {
 }
 
 /**
- * Realiza a busca no mapa com base em um termo.
+ * ✅ FUNÇÃO REFINADA PARA MÚLTIPLOS RESULTADOS
+ * Realiza a busca no mapa. Se encontrar 1 resultado, foca nele.
+ * Se encontrar múltiplos, ajusta o mapa para mostrar todos.
  */
 function buscarNoMapa(termo) {
     const termoNormalizado = normalizar(termo);
-    let encontrado = null;
+    console.log(`[Busca] Iniciando busca por termo normalizado: "${termoNormalizado}"`); 
+    
+    // Array para guardar TODOS os marcadores encontrados
+    const encontrados = []; 
 
-    if (clusterGroup) {
-        clusterGroup.eachLayer(layer => {
-            const cod = normalizar(layer.options.espacoCod || '');
-            const campanhas = (layer.options.campanhas || []).map(n => normalizar(n.nome));
-            if (cod.includes(termoNormalizado) || campanhas.some(n => n.includes(termoNormalizado))) {
-                encontrado = layer;
-            }
-        });
+    if (!clusterGroup) {
+         console.error("[Busca] Erro: clusterGroup não está definido.");
+         return; 
     }
 
-    if (encontrado) {
-        const latlng = encontrado.getLatLng();
-        map.setView(latlng, 17);
-        ajustarLayoutAposZoom();
-        clusterGroup.zoomToShowLayer(encontrado, () => {
-            encontrado.openPopup();
-            ajustarLayoutAposZoom();
+    try {
+        // Percorre TODOS os marcadores
+        clusterGroup.eachLayer(layer => {
+            const rawEspacoCod = layer.options?.espacoCod; 
+            const rawCampanhasArray = layer.options?.campanhas; 
+
+            const codNormalizado = normalizar(rawEspacoCod || ''); 
+            const nomesCampanhasNormalizados = (Array.isArray(rawCampanhasArray) ? rawCampanhasArray : [])
+                .map(campanhaObj => normalizar(campanhaObj?.nome || ''))
+                .filter(nome => nome); 
+
+            // Log de depuração (pode remover depois)
+            // console.log(`[Busca] Comparando termo "${termoNormalizado}" com Marcador:`, { cod: codNormalizado, nomes: nomesCampanhasNormalizados });
+
+            const achouNoCod = codNormalizado.includes(termoNormalizado);
+            const achouNoNome = nomesCampanhasNormalizados.some(n => n.includes(termoNormalizado));
+
+            // Se encontrou correspondência, ADICIONA à lista
+            if (achouNoCod || achouNoNome) {
+                encontrados.push(layer); 
+            }
         });
+    } catch (error) {
+        console.error("[Busca] Erro durante a varredura dos marcadores:", error);
+        showBootstrapAlert("Ocorreu um erro durante a busca.", 'danger');
+        return;
+    }
+
+    // --- AÇÃO COM BASE NO NÚMERO DE RESULTADOS ---
+
+    if (encontrados.length === 0) {
+        // Nenhum resultado
+        console.log("[Busca] Nenhum ponto encontrado para: " + termo); 
+        showBootstrapAlert(`Nenhum ponto encontrado para "${termo}"`, 'info', 3000); 
+
+    } else if (encontrados.length === 1) {
+        // Exatamente UM resultado (comportamento antigo)
+        const unicoEncontrado = encontrados[0];
+        const latlng = unicoEncontrado.getLatLng();
+        console.log("[Busca] 1 Marcador encontrado. Movendo mapa para:", latlng); 
+        map.setView(latlng, 17); // Zoom próximo
+        ajustarLayoutAposZoom();
+        
+        setTimeout(() => {
+            try {
+                if (clusterGroup.hasLayer(unicoEncontrado)) {
+                     clusterGroup.zoomToShowLayer(unicoEncontrado, () => {
+                        unicoEncontrado.openPopup();
+                        ajustarLayoutAposZoom();
+                        console.log("[Busca] Popup único aberto via zoomToShowLayer."); 
+                    });
+                } else {
+                     unicoEncontrado.openPopup(); 
+                }
+            } catch (zoomError) {
+                 console.error("[Busca] Erro ao tentar dar zoom/abrir popup único:", zoomError);
+                 try { unicoEncontrado.openPopup(); } catch (popupError) { console.error("Erro ao abrir popup único diretamente:", popupError); }
+            }
+        }, 300); 
+
+    } else {
+        // MÚLTIPLOS resultados
+        console.log(`[Busca] ${encontrados.length} marcadores encontrados. Ajustando visão do mapa.`); 
+        showBootstrapAlert(`Exibindo ${encontrados.length} locais encontrados para "${termo}"`, 'success', 4000);
+
+        // Cria um grupo temporário apenas com os marcadores encontrados
+        const grupoResultados = L.featureGroup(encontrados); 
+        
+        // Calcula os limites geográficos desse grupo
+        const bounds = grupoResultados.getBounds(); 
+
+        // Ajusta o mapa para mostrar todos os marcadores, com uma pequena margem (padding)
+        if (bounds.isValid()) {
+             map.fitBounds(bounds.pad(0.1)); // pad(0.1) adiciona 10% de margem
+        } else {
+             console.warn("[Busca] Limites inválidos para múltiplos resultados. Verifique as coordenadas.");
+        }
+        ajustarLayoutAposZoom(); // Chama o ajuste após definir a nova visão
     }
 }
 
