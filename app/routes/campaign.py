@@ -194,73 +194,95 @@ def listar_campanhas():
     return render_template('campanhas.html', campanhas=campanhas_data)
 
 
+# Em app/routes/campaign.py
+
 @campaign_bp.route('/importar-campanhas', methods=['POST'])
 @login_required
 def importar_campanhas():
-    
     logger.info("🔄 Iniciando importação de campanhas")
     arquivo = request.files.get('arquivo')
-    if not arquivo or not arquivo.filename: # Verifica se existe E se tem nome de arquivo
+    
+    # Verificação robusta do arquivo (já estava correta)
+    if not arquivo or not arquivo.filename: 
         return jsonify({"success": False, "mensagem": "Nenhum arquivo válido enviado"}), 400
 
+    df = None # Inicializa df como None
     try:
-        # O resto do seu código continua aqui...
+        # Tenta ler o arquivo
         if arquivo.filename.lower().endswith('.csv'):
             df = pd.read_csv(arquivo)
         elif arquivo.filename.lower().endswith(('.xls', '.xlsx')):
             df = pd.read_excel(arquivo)
         else:
             return jsonify({"success": False, "mensagem": "Formato de arquivo não suportado"}), 400
+            
+        # ✅ VERIFICA SE O DATAFRAME FOI CRIADO E NÃO ESTÁ VAZIO
+        if df is None or df.empty:
+             return jsonify({"success": False, "mensagem": "Arquivo vazio ou inválido"}), 400
+             
     except Exception as e:
-        return jsonify({"success": False, "mensagem": "Erro ao processar o arquivo"}), 500
+        logger.error(f"❌ Erro ao ler o arquivo da planilha: {e}")
+        # ✅ Retorna 400 se a leitura falhar, pois o problema é o arquivo
+        return jsonify({"success": False, "mensagem": f"Erro ao processar o arquivo: {e}"}), 400 
 
+    # Normaliza colunas APÓS garantir que df existe
     df.columns = [col.strip().lower() for col in df.columns]
-    conn = get_db_connection()
     
     ignoradas = 0
     criadas = 0
     novas = []
 
-    for i, row in df.iterrows():
-        linha_num = i + 2
-        cod = str(row.get('cod', '')).strip()
-        nome = str(row.get('nome', '')).strip()
-        if not cod or not nome:
-            ignoradas += 1
-            continue
+    # ✅ USA UM GERENCIADOR DE CONTEXTO PARA A CONEXÃO
+    try:
+        with get_db_connection() as conn: # Garante que a conexão é fechada no final, mesmo com erros
+            for i, row in df.iterrows():
+                linha_num = i + 2
+                cod = str(row.get('cod', '')).strip()
+                nome = str(row.get('nome', '')).strip()
+                if not cod or not nome:
+                    ignoradas += 1
+                    continue
+                
+                lat = to_float(row.get('latitude'))
+                lon = to_float(row.get('longitude'))
+                ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                try:
+                    # Verifica se já existe (USANDO A MESMA CONEXÃO 'conn')
+                    existe = conn.execute(
+                        text("SELECT id FROM campanhas WHERE LOWER(cod) = :cod AND LOWER(nome) = :nome"), 
+                        {"cod": cod.lower(), "nome": nome.lower()}
+                    ).fetchone()
+
+                    if existe:
+                        ignoradas += 1
+                        continue
+
+                    # Insere o novo registro (USANDO A MESMA CONEXÃO 'conn')
+                    conn.execute(
+                        text("INSERT INTO campanhas (cod, nome, latitude, longitude, data_criacao) VALUES (:cod, :nome, :lat, :lon, :ts)"),
+                        {"cod": cod, "nome": nome, "lat": lat, "lon": lon, "ts": ts}
+                    )
+                    criadas += 1
+                    novas.append({"cod": cod, "nome": nome, "latitude": lat, "longitude": lon})
+                
+                # ✅ CAPTURA ERROS *ESPECÍFICOS* DENTRO DO LOOP SEM FECHAR A CONEXÃO
+                except Exception as inner_e: 
+                    logger.error(f"❌ Erro ao processar linha {linha_num} ({cod} - {nome}): {inner_e}")
+                    # Não precisamos mais de rollback aqui se o erro for pego antes do commit final
+                    ignoradas += 1
+                    continue # Pula para a próxima linha
+
+            # ✅ COMMIT SÓ ACONTECE NO FINAL, SE NENHUM ERRO GRAVE OCORREU
+            conn.commit() 
+            
+    # ✅ CAPTURA ERROS GERAIS (Ex: Falha na conexão inicial)
+    except Exception as e:
+        logger.error(f"❌ Erro GERAL durante a importação: {e}")
+        return jsonify({"success": False, "mensagem": f"Erro interno durante a importação: {e}"}), 500
         
-        lat = to_float(row.get('latitude'))
-        lon = to_float(row.get('longitude'))
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # CORREÇÃO 10: Usando conn.execute(text()) com marcadores nomeados
-        existe = conn.execute(
-            text("SELECT id FROM campanhas WHERE LOWER(cod) = :cod AND LOWER(nome) = :nome"), 
-            {"cod": cod.lower(), "nome": nome.lower()}
-        ).fetchone()
-
-        if existe:
-            ignoradas += 1
-            continue
-
-        try:
-            # CORREÇÃO 11: Usando conn.execute(text()) com marcadores nomeados
-            conn.execute(
-                text("INSERT INTO campanhas (cod, nome, latitude, longitude, data_criacao) VALUES (:cod, :nome, :lat, :lon, :ts)"),
-                {"cod": cod, "nome": nome, "lat": lat, "lon": lon, "ts": ts}
-            )
-            criadas += 1
-            novas.append({"cod": cod, "nome": nome, "latitude": lat, "longitude": lon})
-        except Exception as e:
-            logger.error(f"❌ Erro ao inserir campanha {cod} - {nome}: {e}")
-            conn.rollback() # Adicionado rollback em caso de falha
-            ignoradas += 1
-            continue
-
-    conn.commit()
-    conn.close()
+    # O código restante (emitir socketio, retornar JSON) continua igual...
     logger.info(f"📦 Importação finalizada: {criadas} criadas, {ignoradas} ignoradas")
-
     if novas:
         socketio.emit('nova_campanha', {'tipo': 'nova_campanha', 'dados': novas})
         logger.debug("📡 WebSocket emitido com novas campanhas")
