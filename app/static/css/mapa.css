@@ -33,25 +33,20 @@ a,
 
 /* Em static/css/mapa.css */
 
-/* Estilo base para o marcador individual (se ainda não tiver) */
+/* Sua classe existente para o círculo azul */
 .leaflet-div-icon-individual {
     background-color: #2a93d5; /* Azul padrão */
     border: 2px solid white;
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    transition: background-color 0.3s ease; /* Adiciona transição suave */
 }
 
-/* Estilo para o marcador quando destacado pela busca */
-.marker-highlighted .leaflet-div-icon-individual {
+/* NOVA classe para o círculo vermelho */
+.marker-highlighted-icon {
     background-color: #dc3545 !important; /* Vermelho Bootstrap Danger */
-    /* Você pode adicionar outras propriedades, como aumentar o tamanho ou a borda */
-     /* border: 3px solid #ffc107;  Exemplo: borda amarela */
-}
-
-/* Adiciona a classe 'marker-highlighted' ao elemento PAI do ícone */
-.marker-highlighted > div {
-    background-color: #dc3545 !important; /* Garante que o div interno também mude */
+    /* Você pode adicionar outros estilos se quiser */
+    /* Exemplo: borda amarela */
+    /* border: 3px solid yellow; */ 
 }
 
 #notification-container {

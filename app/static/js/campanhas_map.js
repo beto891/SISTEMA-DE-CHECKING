@@ -46,6 +46,18 @@ function showBootstrapAlert(message, type = 'success', duration = 4000) {
     }, duration);
 }
 
+// Ícone Padrão (Círculo Azul - assumindo que você já tem a classe CSS)
+const defaultIcon = L.divIcon({
+    className: 'leaflet-div-icon-individual', // Sua classe CSS para o círculo azul
+    iconSize: [12, 12] // Ajuste o tamanho se necessário
+});
+
+// NOVO Ícone Destacado (Círculo Vermelho)
+const highlightedIcon = L.divIcon({
+    className: 'leaflet-div-icon-individual marker-highlighted-icon', // Adiciona uma nova classe
+    iconSize: [14, 14] // Opcional: Um pouco maior para destacar mais
+});
+
 /**
  * Busca e exibe as localizações dos usuários no mapa.
  */
@@ -206,87 +218,127 @@ function normalizar(texto) {
 }
 
 /**
- * ✅ FUNÇÃO REFINADA PARA MÚLTIPLOS RESULTADOS COM DESTAQUE VERMELHO
+ * ✅ FUNÇÃO CORRIGIDA PARA USAR setIcon() PARA DESTAQUE
  * Realiza a busca no mapa. Se encontrar 1 resultado, foca nele.
  * Se encontrar múltiplos, ajusta o mapa e destaca os marcadores em vermelho.
  */
 function buscarNoMapa(termo) {
+    // 1. Normaliza o termo de busca
     const termoNormalizado = normalizar(termo);
     console.log(`[Busca] Iniciando busca por termo normalizado: "${termoNormalizado}"`); 
-    const encontrados = []; 
+    const encontrados = []; // Array para guardar os marcadores encontrados
 
-    // --- 1. Limpa o destaque anterior ---
+    // --- 2. Limpa o destaque anterior (usando setIcon) ---
     if (highlightedMarkers.length > 0) {
         console.log("[Busca] Limpando destaque de marcadores anteriores:", highlightedMarkers.length);
         highlightedMarkers.forEach(marker => {
-            if (marker && marker._icon) { // Verifica se o marcador e seu ícone existem
-                 L.DomUtil.removeClass(marker._icon.parentNode, 'marker-highlighted'); // Remove a classe do elemento PAI
-                 L.DomUtil.removeClass(marker._icon, 'marker-highlighted'); // Garante a remoção da classe no ícone tbm
+            // Verifica se o marcador ainda existe e está no mapa
+            if (marker && map.hasLayer(marker)) { 
+                try {
+                     // Reverte para o ícone padrão (definido globalmente ou no início do script)
+                     marker.setIcon(defaultIcon); 
+                } catch (e) {
+                     console.warn("[Busca] Erro ao reverter ícone:", e, marker);
+                }
             }
         });
-        highlightedMarkers = []; // Limpa o array
+        highlightedMarkers = []; // Limpa o array de rastreamento
     }
 
-    if (!clusterGroup) {
+    // Verifica se o clusterGroup existe
+    if (!clusterGroup) { 
          console.error("[Busca] Erro: clusterGroup não está definido.");
          return; 
     }
 
+    // --- 3. Percorre os marcadores e busca correspondências ---
     try {
         clusterGroup.eachLayer(layer => {
+            // Pega os dados armazenados no marcador com segurança
             const rawEspacoCod = layer.options?.espacoCod; 
             const rawCampanhasArray = layer.options?.campanhas; 
+
+            // Normaliza os dados do marcador para comparação
             const codNormalizado = normalizar(rawEspacoCod || ''); 
             const nomesCampanhasNormalizados = (Array.isArray(rawCampanhasArray) ? rawCampanhasArray : [])
                 .map(campanhaObj => normalizar(campanhaObj?.nome || ''))
                 .filter(nome => nome); 
 
+            // Faz a comparação
             const achouNoCod = codNormalizado.includes(termoNormalizado);
             const achouNoNome = nomesCampanhasNormalizados.some(n => n.includes(termoNormalizado));
 
+            // Se encontrou, adiciona à lista
             if (achouNoCod || achouNoNome) {
                 encontrados.push(layer); 
             }
         });
-    } catch (error) { /* ... tratamento de erro ... */ }
+    } catch (error) { 
+        console.error("[Busca] Erro durante a varredura dos marcadores:", error);
+        showBootstrapAlert("Ocorreu um erro durante a busca.", 'danger');
+        return; 
+    }
 
-    // --- 2. AÇÃO COM BASE NO NÚMERO DE RESULTADOS ---
+    // --- 4. AÇÃO COM BASE NO NÚMERO DE RESULTADOS ---
     if (encontrados.length === 0) {
-        console.log("[Busca] Nenhum ponto encontrado."); 
+        // Nenhum resultado
+        console.log("[Busca] Nenhum ponto encontrado para: " + termo); 
         showBootstrapAlert(`Nenhum ponto encontrado para "${termo}"`, 'info', 3000); 
 
     } else if (encontrados.length === 1) {
         // Exatamente UM resultado (Foco sem destaque permanente)
         const unicoEncontrado = encontrados[0];
-        // ... (lógica de setView, zoomToShowLayer, openPopup - SEM MUDANÇA DE COR) ...
+        const latlng = unicoEncontrado.getLatLng();
         console.log("[Busca] 1 Marcador encontrado. Focando..."); 
-        // Você PODE adicionar um destaque temporário aqui se quiser, mas complica
-         map.setView(unicoEncontrado.getLatLng(), 17);
-         ajustarLayoutAposZoom();
-         setTimeout(() => { /* ... lógica de zoom e popup ... */ }, 300); 
-
+        map.setView(latlng, 17); // Zoom próximo
+        ajustarLayoutAposZoom();
+        
+        // Atraso para garantir que o zoom termine antes de abrir o popup
+        setTimeout(() => { 
+            try {
+                // Verifica se a camada ainda está visível antes de dar zoom/abrir
+                if (clusterGroup.hasLayer(unicoEncontrado)) {
+                     clusterGroup.zoomToShowLayer(unicoEncontrado, () => {
+                        unicoEncontrado.openPopup();
+                        ajustarLayoutAposZoom();
+                        console.log("[Busca] Popup único aberto via zoomToShowLayer."); 
+                    });
+                } else {
+                     console.warn("[Busca] Marcador único encontrado não está mais no clusterGroup. Tentando abrir popup diretamente.");
+                     unicoEncontrado.openPopup(); // Tenta abrir diretamente
+                }
+            } catch (zoomError) {
+                 console.error("[Busca] Erro ao tentar dar zoom/abrir popup único:", zoomError);
+                 // Tenta abrir o popup diretamente como fallback
+                 try { unicoEncontrado.openPopup(); } catch (popupError) { console.error("Erro ao abrir popup único diretamente:", popupError); }
+            }
+        }, 300); // Atraso de 300ms
 
     } else {
-        // MÚLTIPLOS resultados (Destaca e ajusta o zoom)
+        // MÚLTIPLOS resultados (Destaca via setIcon e ajusta o zoom)
         console.log(`[Busca] ${encontrados.length} marcadores encontrados. Destacando e ajustando visão.`); 
         showBootstrapAlert(`Exibindo ${encontrados.length} locais encontrados para "${termo}"`, 'success', 4000);
 
+        // Aplica o ícone destacado a cada marcador encontrado
         encontrados.forEach(marker => {
-            if (marker && marker._icon) { // Verifica se o marcador e seu ícone existem
-                 // Adiciona a classe ao elemento PAI do ícone (mais robusto)
-                 L.DomUtil.addClass(marker._icon.parentNode, 'marker-highlighted'); 
-                 L.DomUtil.addClass(marker._icon, 'marker-highlighted'); // Garante add no ícone tbm
-                 highlightedMarkers.push(marker); // Guarda para limpar depois
-            } else {
-                 console.warn("[Busca] Marcador encontrado inválido ou sem ícone, não pode ser destacado:", marker);
+            try {
+                 // Define o ícone vermelho (definido globalmente ou no início do script)
+                 marker.setIcon(highlightedIcon); 
+                 highlightedMarkers.push(marker); // Adiciona ao array para limpar depois
+            } catch (e) {
+                 console.warn("[Busca] Erro ao definir ícone destacado:", e, marker);
             }
         });
 
         // Ajusta o mapa para mostrar todos os resultados
         const grupoResultados = L.featureGroup(encontrados); 
         const bounds = grupoResultados.getBounds(); 
-        if (bounds.isValid()) { map.fitBounds(bounds.pad(0.1)); } 
-        ajustarLayoutAposZoom();
+        if (bounds.isValid()) { 
+            map.fitBounds(bounds.pad(0.1)); // pad(0.1) adiciona 10% de margem
+        } else {
+            console.warn("[Busca] Limites inválidos para múltiplos resultados. Verifique as coordenadas.");
+        }
+        ajustarLayoutAposZoom(); // Chama o ajuste após definir a nova visão
     }
 }
 
