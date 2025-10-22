@@ -102,7 +102,6 @@ function recarregarMapaComCampanhasAtivas() {
             // >>> USE A LISTA FILTRADA A PARTIR DE AGORA <<<
             campanhasAtivas.forEach(campanha => {
                 const key = `${campanha.latitude},${campanha.longitude}`;
-                console.warn(`[Mapa] Campanha ${idx} sem coordenadas válidas:`, campanha);
                 if (!agrupadas[key]) {
                     agrupadas[key] = {
                         latitude: campanha.latitude,
@@ -121,7 +120,6 @@ function recarregarMapaComCampanhasAtivas() {
                     });
                 }
             });
-            console.log("[Mapa] Objeto 'agrupadas' criado:", agrupadas);
 
             // O resto da sua lógica para criar o HTML do popup e os marcadores
             // continua exatamente igual, pois já está dentro do .then()
