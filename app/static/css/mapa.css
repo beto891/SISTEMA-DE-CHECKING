@@ -39,14 +39,39 @@ a,
     border: 2px solid white;
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    /* Garante que a transformação ocorra a partir do centro */
+    transform-origin: center center; 
 }
 
-/* NOVA classe para o círculo vermelho */
+/* Classe para o círculo vermelho - AGORA COM ANIMAÇÃO */
 .marker-highlighted-icon {
     background-color: #dc3545 !important; /* Vermelho Bootstrap Danger */
-    /* Você pode adicionar outros estilos se quiser */
-    /* Exemplo: borda amarela */
-    /* border: 3px solid yellow; */ 
+    /* Aplica a animação 'pulse', durando 1.5s, repetindo infinitamente */
+    animation: pulse 1.5s infinite ease-in-out;
+    -webkit-animation: pulse 1.5s infinite ease-in-out; /* Prefixo */
+    /* O tamanho base será definido no JS, mas a animação fará ele pulsar */
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1); /* Tamanho normal */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 0 rgba(220, 53, 69, 0.4); /* Sombra normal + Sombra externa invisível */
+  }
+  70% {
+    transform: scale(1.3); /* Aumenta um pouco */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 10px rgba(220, 53, 69, 0); /* Sombra normal + Sombra externa expandida e transparente */
+  }
+  100% {
+    transform: scale(1); /* Volta ao normal */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 0 rgba(220, 53, 69, 0); /* Sombra normal + Sombra externa invisível */
+  }
+}
+
+/* Prefixo para compatibilidade (opcional, mas bom ter) */
+@-webkit-keyframes pulse { /* Para Chrome, Safari, etc. */
+   0% { -webkit-transform: scale(1); box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 0 rgba(220, 53, 69, 0.4); }
+   70% { -webkit-transform: scale(1.3); box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 10px rgba(220, 53, 69, 0); }
+   100% { -webkit-transform: scale(1); box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 0 rgba(220, 53, 69, 0); }
 }
 
 #notification-container {

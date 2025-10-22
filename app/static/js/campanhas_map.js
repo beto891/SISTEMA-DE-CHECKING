@@ -46,16 +46,16 @@ function showBootstrapAlert(message, type = 'success', duration = 4000) {
     }, duration);
 }
 
-// Ícone Padrão (Círculo Azul - assumindo que você já tem a classe CSS)
+// Ícone Padrão (Círculo Azul)
 const defaultIcon = L.divIcon({
-    className: 'leaflet-div-icon-individual', // Sua classe CSS para o círculo azul
-    iconSize: [12, 12] // Ajuste o tamanho se necessário
+    className: 'leaflet-div-icon-individual', 
+    iconSize: [12, 12] // Tamanho padrão (pequeno)
 });
 
-// NOVO Ícone Destacado (Círculo Vermelho)
+// Ícone Destacado (Círculo Vermelho Pulsante)
 const highlightedIcon = L.divIcon({
-    className: 'leaflet-div-icon-individual marker-highlighted-icon', // Adiciona uma nova classe
-    iconSize: [14, 14] // Opcional: Um pouco maior para destacar mais
+    className: 'leaflet-div-icon-individual marker-highlighted-icon', // Adiciona a classe da animação
+    iconSize: [16, 16] // Tamanho base UM POUCO MAIOR que o padrão
 });
 
 /**
