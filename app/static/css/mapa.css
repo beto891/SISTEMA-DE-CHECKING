@@ -30,6 +30,30 @@ a,
     text-decoration: none;
 }
 
+
+/* Em static/css/mapa.css */
+
+/* Estilo base para o marcador individual (se ainda não tiver) */
+.leaflet-div-icon-individual {
+    background-color: #2a93d5; /* Azul padrão */
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    transition: background-color 0.3s ease; /* Adiciona transição suave */
+}
+
+/* Estilo para o marcador quando destacado pela busca */
+.marker-highlighted .leaflet-div-icon-individual {
+    background-color: #dc3545 !important; /* Vermelho Bootstrap Danger */
+    /* Você pode adicionar outras propriedades, como aumentar o tamanho ou a borda */
+     /* border: 3px solid #ffc107;  Exemplo: borda amarela */
+}
+
+/* Adiciona a classe 'marker-highlighted' ao elemento PAI do ícone */
+.marker-highlighted > div {
+    background-color: #dc3545 !important; /* Garante que o div interno também mude */
+}
+
 #notification-container {
     position: fixed; /* Fixo em relação à janela do navegador */
     bottom: 20px;    /* Distância de 20px da parte inferior da TELA */
