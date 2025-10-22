@@ -80,75 +80,101 @@ function fetchAndDisplayUserLocations() {
  * Busca os dados de TODAS as campanhas, filtra as ativas e exibe no mapa.
  */
 function recarregarMapaComCampanhasAtivas() {
+    console.log("[Mapa] Iniciando recarregamento..."); 
     fetch('/api/campaign/mapa-dados')
         .then(response => {
-            if (!response.ok) throw new Error('Erro ao buscar dados das campanhas.');
+            if (!response.ok) throw new Error(`Erro ${response.status} ao buscar dados das campanhas.`);
             return response.json();
         })
-        .then(todasAsCampanhas => { // Renomeado para clareza
-            if (!clusterGroup) return;
-            
-            // >>> FILTRO PRINCIPAL AQUI <<<
-            // Cria uma nova lista contendo apenas as campanhas não concluídas.
-            const campanhasAtivas = todasAsCampanhas.filter(campanha => !campanha.concluida);
+        .then(todasAsCampanhas => {
+            console.log("[Mapa] Dados recebidos da API:", todasAsCampanhas); 
 
-            // Limpa as camadas antigas do mapa
-            clusterGroup.clearLayers();
-            for (const key in campaignMarkers) {
-                delete campaignMarkers[key];
+            if (!clusterGroup) {
+                console.error("[Mapa] Erro: clusterGroup não inicializado!");
+                return;
             }
+            
+            const campanhasAtivas = todasAsCampanhas.filter(campanha => !campanha.concluida);
+            console.log(`[Mapa] Campanhas ativas (após filtro !concluida): ${campanhasAtivas.length}`, campanhasAtivas); 
+
+            clusterGroup.clearLayers();
+            for (const key in campaignMarkers) { delete campaignMarkers[key]; }
 
             const agrupadas = {};
-            // >>> USE A LISTA FILTRADA A PARTIR DE AGORA <<<
-            campanhasAtivas.forEach(campanha => {
+            // Loop de Agrupamento
+            campanhasAtivas.forEach((campanha) => { // Removido 'idx' pois não era usado corretamente
+                if (campanha.latitude == null || campanha.longitude == null) {
+                    // ✅ CORREÇÃO APLICADA AQUI
+                    console.warn(`[Mapa] Campanha ID ${campanha.id} (${campanha.nome}) sem coordenadas válidas:`, campanha); 
+                    return; // Pula esta campanha
+                }
                 const key = `${campanha.latitude},${campanha.longitude}`;
                 if (!agrupadas[key]) {
                     agrupadas[key] = {
-                        latitude: campanha.latitude,
-                        longitude: campanha.longitude,
-                        codigos: new Set(),
-                        nomes: []
+                        latitude: campanha.latitude, longitude: campanha.longitude,
+                        codigos: new Set(), nomes: []
                     };
                 }
                 agrupadas[key].codigos.add(campanha.cod);
-                const campanhaJaAdicionada = agrupadas[key].nomes.some(c => c.nome === campanha.nome);
-                if (!campanhaJaAdicionada) {
-                    agrupadas[key].nomes.push({
-                        id: campanha.id,
-                        nome: campanha.nome,
-                        cod: campanha.cod
-                    });
+                if (!agrupadas[key].nomes.some(c => c.nome === campanha.nome)) {
+                     agrupadas[key].nomes.push({ id: campanha.id, nome: campanha.nome, cod: campanha.cod });
                 }
             });
+            console.log("[Mapa] Objeto 'agrupadas' criado:", agrupadas); 
 
-            // O resto da sua lógica para criar o HTML do popup e os marcadores
-            // continua exatamente igual, pois já está dentro do .then()
-            Object.values(agrupadas).forEach(item => {
-                const linkStyle = "display: block; margin-bottom: 5px; word-wrap: break-word; white-space: normal;";
-                const campanhasHtml = item.nomes.map(c =>
-                    `<a href="#" class="btn-upload-campanha" data-campanha-cod="${c.cod}" data-campanha-nome="${c.nome}" style="${linkStyle}">${c.nome}</a>`
-                ).join("");
-                const espacosHtml = Array.from(item.codigos).join(', ') || 'N/A';
-                const popupContent = `
-                                    <div class="popup-grande" style="white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2;">
-                                        <strong>Espaço:</strong> ${espacosHtml}<br>
-                                        <strong style="margin-top: 10px; display: inline-block;">Campanhas:</strong><br>
-                                        ${campanhasHtml}
-                                    </div>
-                                `; // Seu HTML do popup
-                const popupOptions = { maxWidth: 500, minWidth: 280 };
-                const marker = L.marker([item.latitude, item.longitude]).bindPopup(popupContent, popupOptions);
+            const gruposParaRenderizar = Object.values(agrupadas);
+            console.log(`[Mapa] Número de grupos para renderizar: ${gruposParaRenderizar.length}`); 
 
-                item.nomes.forEach(c => {
-                    if (c.id) campaignMarkers[c.id] = marker;
-                });
-                
-                // ... (resto da sua lógica de adicionar layers) ...
-                clusterGroup.addLayer(marker);
+            // Loop de Renderização
+            gruposParaRenderizar.forEach((item, index) => { 
+                console.log(`[Mapa] Renderizando grupo ${index}:`, item); 
+                try { 
+                    const campanhasHtml = item.nomes.map(c =>
+                        `<a href="#" class="btn-upload-campanha" data-campanha-cod="${c.cod}" data-campanha-nome="${c.nome}">${c.nome}</a>`
+                    ).join('<br>');
+                    const espacosHtml = Array.from(item.codigos).join(', ') || 'N/A';
+                    const popupContent = `
+                        <div class="popup-grande" style="white-space: normal; word-wrap: break-word; font-size: 14px; line-height: 1.2;">
+                            <strong>Espaços:</strong> ${espacosHtml}<br>
+                            <strong style="margin-top: 10px; display: inline-block;">Campanhas:</strong><br>
+                            ${campanhasHtml}
+                        </div>
+                    `; 
+                    const popupOptions = { maxWidth: 500, minWidth: 280 };
+
+                    if (item.latitude == null || item.longitude == null) {
+                         console.error("[Mapa] ERRO GRAVE: Item agrupado sem coordenadas válidas:", item);
+                         return; 
+                    }
+
+                    const marker = L.marker([item.latitude, item.longitude]).bindPopup(popupContent, popupOptions);
+
+                    const codigosString = Array.from(item.codigos).join(', ');
+                    marker.options.espacoCod = codigosString; 
+                    marker.options.campanhas = item.nomes; 
+                    marker.options.campanhasCount = item.nomes.length;
+
+                    console.log(`[Mapa] Marcador ${index} Dados Armazenados:`, { cod: marker.options.espacoCod, nomes: marker.options.campanhas.map(c=>c.nome) }); 
+
+                    item.nomes.forEach(c => { if (c.id) campaignMarkers[c.id] = marker; });
+                    clusterGroup.addLayer(marker);
+
+                } catch (renderError) {
+                     console.error(`[Mapa] Erro ao renderizar grupo ${index}:`, item, renderError);
+                }
             });
-            map.addLayer(clusterGroup);
+            
+            if (gruposParaRenderizar.length > 0) {
+                 map.addLayer(clusterGroup);
+                 console.log("[Mapa] Mapa e clusters atualizados com sucesso."); 
+            } else {
+                 console.warn("[Mapa] Nenhum grupo para renderizar no mapa."); 
+            }
         })
-        .catch(error => console.error('Erro ao carregar campanhas:', error));
+        .catch(error => {
+            console.error('[Mapa] Erro CRÍTICO no fetch ou processamento:', error);
+             showBootstrapAlert(`Erro ao carregar os dados do mapa: ${error.message}`, 'danger');
+        });
 }
 
 /**
