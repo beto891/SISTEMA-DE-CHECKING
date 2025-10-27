@@ -168,9 +168,28 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
         c.setFont("Helvetica", 14)
         c.drawCentredString(largura / 2, altura - 7.5 * cm, f"PI: {pi_numero}")
 
+     # --- ✅ BLOCO DE FORMATAÇÃO DAS DATAS DA CAPA ---
+    # Este é o local para a alteração
     if data_inicio and data_fim:
+        try:
+            # Tenta formatar data_inicio para DD/MM/YYYY
+            data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d')
+            data_inicio_formatada = data_inicio_obj.strftime('%d/%m/%Y')
+        except ValueError:
+            data_inicio_formatada = data_inicio # Usa original se falhar
+
+        try:
+            # Tenta formatar data_fim para DD/MM/YYYY
+            data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d')
+            data_fim_formatada = data_fim_obj.strftime('%d/%m/%Y')
+        except ValueError:
+            data_fim_formatada = data_fim # Usa original se falhar
+
+        # Usa as datas formatadas (ou originais)
         c.setFont("Helvetica", 12)
-        c.drawCentredString(largura / 2, altura - 8.8 * cm, f"Período: {data_inicio} até {data_fim}")
+        c.drawCentredString(largura / 2, altura - 8.8 * cm, f"Período: {data_inicio_formatada} até {data_fim_formatada}")
+    # --- FIM DO BLOCO DE FORMATAÇÃO ---
+
 
     hoje = datetime.now().strftime("%d/%m/%Y")
     c.setFont("Helvetica-Oblique", 11)
@@ -250,6 +269,21 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
                 c.setFont("Helvetica", 12)
                 c.drawString(1.5 * cm, 1.8 * cm, f"Campanha: {nome}")
                 c.drawString(1.5 * cm, 1.1 * cm, local_text)
+
+                # --- ✅ ADICIONAR A DATA DE INÍCIO AQUI ---
+                if data_inicio:
+                    try:
+                        # Tenta formatar a data para DD/MM/YYYY
+                        data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d')
+                        data_inicio_formatada = data_inicio_obj.strftime('%d/%m/%Y')
+                    except ValueError:
+                        data_inicio_formatada = data_inicio # Usa a string original se falhar
+                        
+                    c.setFont("Helvetica-Oblique", 10) # Fonte menor e itálico
+                    c.setFillColorRGB(0.4, 0.4, 0.4)   # Cor cinza
+                    # Desenha alinhado à direita, na mesma altura do local_text
+                    c.drawRightString(largura - 1.5 * cm, 1.1 * cm, f"Início: {data_inicio_formatada}") 
+                # --- FIM DA ADIÇÃO DA DATA ---
 
                 logo2_path = os.path.join(current_app.root_path, "utils", "static", "imagens", "logo2.png")
                 if os.path.exists(logo2_path):
