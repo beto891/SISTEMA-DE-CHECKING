@@ -54,16 +54,26 @@ def buscar_localizacao(lat, lng):
     return None, None
 
 def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
-    # ... (Esta função permanece exatamente igual)
     conn = get_db_connection()
+
+    # ✅ Query Otimizada com INNER JOIN
     rows = conn.execute(text("""
         SELECT
             c.id, c.cod, c.nome, c.latitude, c.longitude, i.imagem_path
-        FROM campanhas AS c
-        LEFT JOIN campanhas_imagens AS i
-        ON i.campanha_id = c.id AND i.apagada = 0
-        WHERE LOWER(c.nome) LIKE :nome_campanha
-    """), {"nome_campanha": f"%{nome_campanha.lower()}%"}).fetchall()
+        FROM campanhas AS cutils
+        
+        -- 1. Mudamos para INNER JOIN:
+        -- Isso garante que só retornamos linhas de 'campanhas' (c)
+        -- que têm uma correspondência em 'campanhas_imagens' (i).
+        INNER JOIN campanhas_imagens AS i 
+            ON i.campanha_id = c.id
+        
+        -- 2. Movemos todas as condições para o WHERE para maior clareza:
+        WHERE 
+            c.nome = :nome_campanha  -- Filtra pelo nome exato (mais rápido que LIKE)
+            AND i.apagada = 0        -- Garante que a imagem não está na lixeira
+            
+    """), {"nome_campanha": nome_campanha}).fetchall() # 3. Usamos a variável exata (sem % e lower)
     conn.close()
     agrup = {}
     for id_, cod, nome, lat, lng, img in rows:
