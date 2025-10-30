@@ -60,7 +60,7 @@ def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
     rows = conn.execute(text("""
         SELECT
             c.id, c.cod, c.nome, c.latitude, c.longitude, i.imagem_path
-        FROM campanhas AS cutils
+        FROM campanhas AS c
         
         -- 1. Mudamos para INNER JOIN:
         -- Isso garante que só retornamos linhas de 'campanhas' (c)
