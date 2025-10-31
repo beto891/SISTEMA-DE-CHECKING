@@ -308,7 +308,8 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
                 c.drawString(1.5 * cm, 1.8 * cm, f"Campanha: {nome}")
                 c.drawString(1.5 * cm, 1.1 * cm, local_text)
                 
-                # Adiciona a data de início em cada página (já estava correto)
+                # Adiciona a data de início em cada página 
+
                 if data_inicio:
                     try:
                         data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d')
@@ -317,7 +318,7 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
                         data_inicio_formatada = data_inicio
                     c.setFont("Helvetica-Oblique", 10)
                     c.setFillColorRGB(0.4, 0.4, 0.4)
-                    c.drawRightString(largura - 1.5 * cm, 1.1 * cm, f"Início: {data_inicio_formatada}") 
+                    c.drawRightString(largura - 1.5 * cm, 1.1 * cm, f"{data_inicio_formatada}") 
 
                 logo2_path = os.path.join(current_app.root_path, "utils", "static", "imagens", "logo2.png")
                 if os.path.exists(logo2_path):
