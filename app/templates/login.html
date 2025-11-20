@@ -17,11 +17,10 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+
+     <div id="particles-js"></div>
+
    <div class="container">
-        <i style="--color:#a069e9";></i>
-        <i style="--color:#f916c0";></i>
-        <i style="--color:#facc15";></i>
-        
     <div class="login-pagina">
         
     <img src="{{ url_for('static', filename='img/users(2).svg') }}" alt="Logo" class="logo-img">
@@ -41,14 +40,6 @@
                 <p style="color: red;">{{ erro }}</p>
             {% endif %}
         </form>
-        <footer>
-        <div class="roda-pe">
-            <p>
-                <img src="{{ url_for('static', filename='img/copyright_24dp_FFFFFF.svg') }}" class="copy">
-                Desenvolvido por <a href="" target="_blank">E. S. S. soluções e tecnologia</a>
-            </p>
-        </div>
-    </footer>
     </div>
     </div>
 
@@ -62,7 +53,8 @@
             </p>
         </div>
     </footer>
-
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
