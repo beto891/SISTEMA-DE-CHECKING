@@ -103,7 +103,7 @@ def inicializar_banco(app):
         # Adiciona apagada a campanhas_imagens
         safe_alter_table(conn, 'campanhas_imagens', 'apagada', 'INTEGER DEFAULT 0')
         #Adiciona coluna concluida a campanhas
-        safe_alter_table(conn, 'campanhas', 'concluida', 'INTEGER DEFAULT 0')
+        safe_alter_table(conn, 'campanhas', 'concluida', 'BOOLEAN DEFAULT FALSE')
         # --- PASSO 4: CRIAÇÃO DE USUÁRIO ADMIN PADRÃO ---
         try:
             # Busca o admin
