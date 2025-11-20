@@ -61,6 +61,22 @@ def inicializar_banco(app):
             print(f"❌ Erro ao criar tabelas manuais: {e}")
             pass
 
+        # --- PASSO 2.5: CORREÇÃO DE TIPOS (CRÍTICO: Resolve erro integer vs boolean) ---
+        # Tenta converter a coluna 'concluida' de INTEGER (0/1) para BOOLEAN (False/True)
+        try:
+            print("🔄 Verificando e corrigindo tipo da coluna 'concluida'...")
+            conn.execute(text("""
+                ALTER TABLE campanhas 
+                ALTER COLUMN concluida TYPE BOOLEAN 
+                USING concluida::boolean
+            """))
+            conn.commit()
+            print("✅ Sucesso! A coluna 'concluida' foi convertida para BOOLEAN.")
+        except Exception as e:
+            # Se já for boolean ou a coluna não existir ainda, vai dar erro, que ignoramos aqui.
+            # O print ajuda a debugar se foi algo grave ou apenas "já feito".
+            conn.rollback()
+            print(f"ℹ️ Aviso na conversão de tipo (pode ser ignorado se a coluna já for boolean): {e}")
 
         # --- PASSO 3: MIGRAÇÕES DE COLUNA (ALTER TABLE) ---
         # Adiciona colunas que podem ter sido omitidas em migrações anteriores ou no ORM
@@ -102,8 +118,10 @@ def inicializar_banco(app):
         safe_alter_table(conn, 'usuarios', 'is_admin', 'INTEGER DEFAULT 0')
         # Adiciona apagada a campanhas_imagens
         safe_alter_table(conn, 'campanhas_imagens', 'apagada', 'INTEGER DEFAULT 0')
-        #Adiciona coluna concluida a campanhas
+        
+        # Adiciona coluna concluida a campanhas (Garante que ela exista como BOOLEAN se não existia antes)
         safe_alter_table(conn, 'campanhas', 'concluida', 'BOOLEAN DEFAULT FALSE')
+        
         # --- PASSO 4: CRIAÇÃO DE USUÁRIO ADMIN PADRÃO ---
         try:
             # Busca o admin
