@@ -16,6 +16,9 @@ from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 from sqlalchemy import text 
 
+# ✅ Definição Global (Acessível por todo o arquivo)
+magenta = Color(0.95, 0.2, 0.5)
+
 # ◀️ NOVO: Importar o serviço de cache (necessário para o Redis)
 # Certifique-se de ter criado o arquivo app/services/cache_service.py conforme orientado
 from app.services.cache_service import cache_service
@@ -191,7 +194,6 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
         faixa_largura = 1.5 * cm
         faixa_altura = altura * 0.7
         raio = 17
-        magenta = Color(0.95, 0.2, 0.5)
         y_pos = 2 * cm
         x_esq = -0.5 * cm
         x_dir = largura - faixa_largura + 0.5 * cm
