@@ -31,23 +31,22 @@ def inicio():
 def dashboard():
     conn = db.engine.connect()
 
-    # Query 1 (resultados) - CORRIGIDA
+    # Query 1 (resultados) - CORRIGIDA PARA AGRUPAR REAIS DUPLICATAS
     resultados = conn.execute(text("""
         SELECT
             c.nome AS campanha,
-            c.data_criacao,
+            MIN(c.data_criacao) AS data_criacao, -- Pega a data mais antiga para exibição
             c.concluida,
-            MIN(c.id) AS id,
-            COUNT(DISTINCT c.cod) AS total_espacos,
-            COUNT(DISTINCT CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
+            MIN(c.id) AS id, -- Pega um ID qualquer (o primeiro) para usar nos botões
+            COUNT(c.cod) AS total_espacos, -- Conta o total de linhas (espaços) com esse nome
+            COUNT(CASE WHEN i.imagem_path IS NOT NULL THEN c.cod END)
                 AS espacos_com_imagem
         FROM campanhas c
         LEFT JOIN campanhas_imagens i
         ON i.campanha_id = c.id
         GROUP BY
             c.nome,
-            c.data_criacao,
-            c.concluida
+            c.concluida -- Agrupa apenas por Nome e Status
         ORDER BY c.nome
     """)).fetchall()
 
@@ -290,29 +289,44 @@ def verificar_imagens(nome):
 @dashboard_bp.route('/api/campanha/<int:id_campanha>', methods=['DELETE'])
 @login_required
 def excluir_campanha_api(id_campanha):
-    conn = db.engine.connect() # Padronizando para db.engine.connect()
+    conn = db.engine.connect()
 
     try:
-        # CORREÇÃO 8: Substitui conn.cursor().execute(SQL_bruto) por conn.execute(text())
-        
-        # Passo 1: Excluir todos os espaços relacionados a esta campanha
-        conn.execute(
-            text("DELETE FROM espacos WHERE id_campanha = :id"), 
+        # 1. Descobrir o NOME da campanha baseada no ID que foi clicado
+        row = conn.execute(
+            text("SELECT nome FROM campanhas WHERE id = :id"), 
             {"id": id_campanha}
-        )
+        ).fetchone()
 
-        # Passo 2: Excluir a própria campanha
-        cursor_campanha = conn.execute(
-            text("DELETE FROM campanhas WHERE id = :id"), 
-            {"id": id_campanha}
+        if not row:
+            return jsonify({"success": False, "message": "Campanha não encontrada."}), 404
+        
+        nome_campanha = row.nome
+
+        print(f"🗑️ Excluindo TODAS as campanhas com o nome: '{nome_campanha}'")
+
+        # 2. Apagar imagens relacionadas a QUALQUER campanha com esse nome
+        # (Precisamos sub-selecionar os IDs baseados no nome)
+        conn.execute(text("""
+            DELETE FROM campanhas_imagens 
+            WHERE campanha_id IN (SELECT id FROM campanhas WHERE nome = :nome)
+        """), {"nome": nome_campanha})
+
+        # 3. Apagar as campanhas em si pelo NOME
+        result = conn.execute(
+            text("DELETE FROM campanhas WHERE nome = :nome"), 
+            {"nome": nome_campanha}
         )
         
         conn.commit()
-        return jsonify({"success": True, "message": "Campanha e todos os espaços relacionados foram excluídos com sucesso."}), 200
+        
+        msg = f"Sucesso! {result.rowcount} registros da campanha '{nome_campanha}' foram excluídos."
+        return jsonify({"success": True, "message": msg}), 200
+
     except Exception as e:
         conn.rollback()
-        print(f"Erro ao excluir campanha: {e}")
-        return jsonify({"success": False, "message": "Erro ao excluir campanha."}), 500
+        print(f"❌ Erro ao excluir campanha: {e}")
+        return jsonify({"success": False, "message": "Erro interno ao excluir campanha."}), 500
     finally:
         conn.close()
 
