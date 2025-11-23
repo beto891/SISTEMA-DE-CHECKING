@@ -64,58 +64,50 @@ function normalizarUrlDropbox(url) {
     }
 }
 
-/// --- NOVA FUNÇÃO CORRIGIDA PARA O BOTÃO COM LOADING ---
-// --- NOVA FUNÇÃO CORRIGIDA E SIMPLIFICADA ---
+// --- VERSÃO "DO JEITO QUE ERA ANTES" (MAS COM SPINNER) ---
 async function gerarRelatorioPDF() {
-    // 1. Seleciona o formulário e o botão
     const form = document.getElementById('formPdfGeracao');
     const btn = document.getElementById('btnGerarPdf'); 
 
-    // 2. Validação básica
+    // 1. Validação (igual antes)
     if (!form.checkValidity()) {
         alert('⚠️ Preencha todos os campos obrigatórios.');
         form.reportValidity();
         return;
     }
 
-    // 3. Feedback Visual
-    // Guarda o conteúdo original (ícone + texto) para restaurar depois
-    const conteudoOriginal = btn.innerHTML; 
+    // 2. Feedback Visual (A única novidade real)
+    const conteudoOriginal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
     try {
         $('#modalPdfInfo').modal('hide');
-        showBootstrapAlert('Iniciando geração do PDF. Isso pode levar alguns minutos...', 'info');
+        showBootstrapAlert('Iniciando geração do PDF...', 'info');
 
-        // 4. PREPARAÇÃO DOS DADOS (SIMPLIFICADA)
-        // O FormData pega automaticamente todos os inputs com 'name' do formulário.
-        // Como seu HTML já tem name="nome", name="pi", etc., não precisamos fazer nada manual!
+        // 3. O PULO DO GATO 🐈
         const formData = new FormData(form);
 
-        // 5. REQUISIÇÃO
+        // 4. Envio
         const response = await fetch('/gerar-pdf', {
             method: 'POST',
-            body: formData // Envia direto! O navegador cuida do resto.
+            body: formData // Envia exatamente o que está no HTML
         });
 
         if (!response.ok) {
-            let errorMsg = 'Erro ao gerar PDF no servidor.';
-            try {
-                const erro = await response.json();
-                errorMsg = erro.mensagem || errorMsg;
-            } catch(e) {}
-            throw new Error(errorMsg);
+            // Se o Python devolver 404 ou 500, lemos a mensagem
+            const erro = await response.json(); 
+            throw new Error(erro.mensagem || 'Erro desconhecido no servidor.');
         }
 
-        // 6. DOWNLOAD
+        // 5. Download (Sucesso)
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         
-        // Tenta pegar o nome da campanha para o arquivo
-        const nomeArquivo = formData.get('nome') || 'Campanha';
+        // Pega o nome direto do formulário para o arquivo
+        const nomeArquivo = formData.get('nome') || 'Campanha'; 
         a.download = `Relatorio_${nomeArquivo}.pdf`;
         
         document.body.appendChild(a);
@@ -123,15 +115,14 @@ async function gerarRelatorioPDF() {
         a.remove();
         window.URL.revokeObjectURL(url);
 
-        showBootstrapAlert('✅ PDF gerado e baixado com sucesso!', 'success');
+        showBootstrapAlert('✅ PDF gerado com sucesso!', 'success');
 
     } catch (error) {
         console.error(error);
+        // Aqui aparecerá o erro real do Python (ex: "Campanha sem registros válidos")
         showBootstrapAlert(`Erro: ${error.message}`, 'danger');
-        // Reabre o modal para tentar de novo se deu erro
         $('#modalPdfInfo').modal('show');
     } finally {
-        // 7. Restaura o botão
         btn.disabled = false;
         btn.innerHTML = conteudoOriginal;
     }

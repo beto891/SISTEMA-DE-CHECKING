@@ -72,17 +72,6 @@
             <option value="fechado">Abaixo da meta</option>
         </select>
     </div>
-
-    <!-- <div class="col-md-auto form-group">
-        <label for="data-inicio"><b>Data de Início:</b></label>
-        <input type="date" class="form-control form-control-sm" id="data-inicio">
-    </div>
-
-    <div class="col-md-auto form-group">
-        <label for="data-fim"><b>Data de Fim:</b></label>
-        <input type="date" class="form-control form-control-sm" id="data-fim">
-    </div> -->
-
 </div>
 
     <h2>📋 Resumo </h2>
@@ -170,7 +159,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="inputPi">Número do PI</label>
-                                <input type="text" class="form-control" id="inputPi" name="pi_numero" placeholder="Ex: 1234-56" required>
+                                <input type="text" class="form-control" id="inputPi" name="pi" placeholder="Ex: 1234-56" required>
                             </div>
                         </div>
 
@@ -182,7 +171,7 @@
                                         <span class="input-group-text"><i class="fas fa-upload"></i></span>
                                     </div>
                                     <div class="custom-file">
-                                        <input type="file" class="custom-file-input" id="inputImagem" name="imagem_dinamica" accept="image/*">
+                                        <input type="file" class="custom-file-input" id="inputImagem" name="imagemCampanha" accept="image/*">
                                         <label class="custom-file-label" for="inputImagem" id="labelImagem">Escolher imagem</label>
                                     </div>
                                 </div>
@@ -192,19 +181,19 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="inputInicio">Data de Início</label>
-                                <input type="date" class="form-control" id="inputInicio" name="data_inicio" required>
+                                <input type="date" class="form-control" id="inputInicio" name="inicio" required>
                             </div>
                         </div>
 
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="inputFim">Data Final</label>
-                                <input type="date" class="form-control" id="inputFim" name="data_fim" required>
+                                <input type="date" class="form-control" id="inputFim" name="fim" required>
                             </div>
                         </div>
                     </div>
 
-                    <input type="hidden" id="inputCampanha" name="nome_campanha">
+                    <input type="hidden" id="inputCampanha" name="nome">
                 </form>
             </div>
 
@@ -348,44 +337,32 @@
 
     <div id="notification-container" class="position-fixed" style="bottom: 20px; right: 20px; z-index: 1060;"></div>
 
-<script>
-    // O pipe |tojson converte a lista Python para um Array JS válido
-    // O |safe diz para o HTML não escapar as aspas
-    window.registros = {{ registros|tojson|safe }};
-</script>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
-<script src="{{ url_for('static', filename='js/pesquisa_dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/campanhas_map.js') }}"></script> <script src="{{ url_for('static', filename='js/pesquisa_dashboard.js') }}"></script>
 <script src="{{ url_for('static', filename='js/func_dashboard.js') }}"></script>
 
-
 <script>
-    
+    // --- 1. Lógica do Gráfico ---
     let meuGrafico;
 
-    /**
-     * ✅ NOVA FUNÇÃO
-     * Busca os dados mais recentes da API e atualiza o gráfico.
-     */
     async function recarregarGraficoDoDashboard() {
         try {
             const response = await fetch('/api/dashboard/chart-data');
             const data = await response.json();
-
             const newLabels = data.labels;
             const newValores = data.valores;
-
             const campanhasAtivas = newValores.filter(v => v >= 10).length;
             const totalCampanhas = newValores.length;
             const newTitle = `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`;
             
-            // Se o gráfico ainda não existe, cria ele
             if (!meuGrafico) {
-                meuGrafico = new Chart(document.getElementById('graficoCampanhas'), {
+                const ctx = document.getElementById('graficoCampanhas').getContext('2d');
+                meuGrafico = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: newLabels,
@@ -395,46 +372,42 @@
                             backgroundColor: newValores.map(v => v >= 100 ? '#28a745' : '#dc3545')
                         }]
                     },
-                    options: {  scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`,
-                    font: {
-                        size: 16,
-                        weight: 'bold'
+                    options: {
+                        scales: { y: { beginAtZero: true, max: 100 } },
+                        plugins: {
+                            title: { display: true, text: newTitle, font: { size: 16 } },
+                            tooltip: { callbacks: { label: ctx => ctx.raw + '% completo' } }
+                        }
                     }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ctx.raw + '% completo'
-                    }
-                }
-            }
-        } });
-        
+                });
             } else {
                 meuGrafico.data.labels = newLabels;
                 meuGrafico.data.datasets[0].data = newValores;
                 meuGrafico.data.datasets[0].backgroundColor = newValores.map(v => v >= 100 ? '#28a745' : '#dc3545');
                 meuGrafico.options.plugins.title.text = newTitle;
-                meuGrafico.update(); // O comando mágico para redesenhar!
+                meuGrafico.update();
             }
         } catch (error) {
             console.error("Erro ao recarregar o gráfico:", error);
         }
     }
 
-   
+    // --- 2. Inicialização ---
     $(document).ready(function() {
+        // Carrega o gráfico inicial
         recarregarGraficoDoDashboard();
+
+        // Atualiza gráfico e mapa ao mudar status (checkbox)
+        $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
+            // Pequeno delay para garantir que o backend processou a mudança
+            setTimeout(() => {
+                recarregarGraficoDoDashboard();
+                if (typeof recarregarMapaComCampanhasAtivas === 'function') {
+                    recarregarMapaComCampanhasAtivas();
+                }
+            }, 500);
+        });
     });
 </script>
-
 </body>
 </html>
