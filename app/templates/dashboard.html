@@ -211,7 +211,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
                 
-                <button id="btnGerarPdf" class="btn btn-danger">
+                <button id="btnGerarPdf" class="btn btn-primary">
                     <span id="iconPDF"><i class="fas fa-file-pdf"></i></span>
                     <span id="spinnerPDF" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                     <span id="textoPDF">Gerar PDF</span>
@@ -348,6 +348,12 @@
 
     <div id="notification-container" class="position-fixed" style="bottom: 20px; right: 20px; z-index: 1060;"></div>
 
+<script>
+    // O pipe |tojson converte a lista Python para um Array JS válido
+    // O |safe diz para o HTML não escapar as aspas
+    window.registros = {{ registros|tojson|safe }};
+</script>
+
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -358,7 +364,7 @@
 
 
 <script>
-    // 1. Crie uma variável global para guardar a instância do gráfico
+    
     let meuGrafico;
 
     /**
@@ -370,11 +376,9 @@
             const response = await fetch('/api/dashboard/chart-data');
             const data = await response.json();
 
-            // Pega os novos dados
             const newLabels = data.labels;
             const newValores = data.valores;
 
-            // Calcula o novo título
             const campanhasAtivas = newValores.filter(v => v >= 10).length;
             const totalCampanhas = newValores.length;
             const newTitle = `Campanhas: ${campanhasAtivas} atingiram a meta de um total de ${totalCampanhas}`;
@@ -415,7 +419,6 @@
         } });
         
             } else {
-                // Se o gráfico JÁ EXISTE, apenas atualiza os dados
                 meuGrafico.data.labels = newLabels;
                 meuGrafico.data.datasets[0].data = newValores;
                 meuGrafico.data.datasets[0].backgroundColor = newValores.map(v => v >= 100 ? '#28a745' : '#dc3545');
@@ -427,20 +430,7 @@
         }
     }
 
-    // 2. No seu outro arquivo JS (func_dashboard.js), modifique o evento do checkbox:
-    // Adicione a chamada para a nova função
-    /*
-        $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
-            // ... sua lógica de fetch para a API de status ...
-            
-            // Após o sucesso:
-            showBootstrapAlert(data.mensagem, 'success');
-            recarregarMapaComCampanhasAtivas();
-            recarregarGraficoDoDashboard(); // <<< ADICIONE ESTA LINHA
-        });
-    */
-
-    // 3. Garante que o gráfico seja carregado na primeira vez
+   
     $(document).ready(function() {
         recarregarGraficoDoDashboard();
     });
