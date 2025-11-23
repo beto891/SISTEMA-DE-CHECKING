@@ -1,87 +1,87 @@
 import os
 import json
 import logging
-import redis
 
 # Configuração de Log
 logger = logging.getLogger(__name__)
 
-# 1. Tenta importar o Redis de forma segura
-# Se a biblioteca não estiver no requirements.txt, o app não quebra, apenas desativa o cache.
+# Tenta importar a biblioteca específica do Upstash
 try:
-    import redis
+    from upstash_redis import Redis
 except ImportError:
-    logger.critical("❌ A biblioteca 'redis' não está instalada! O cache será desativado.")
-    redis = None
+    logger.critical("❌ A biblioteca 'upstash-redis' não está instalada! O cache será desativado.")
+    Redis = None
 
 class CacheService:
     """
-    Gerencia a conexão e as operações de cache com o Upstash Redis.
-    Se a conexão falhar, ele falha silenciosamente para não derrubar a aplicação.
+    Gerencia o cache usando a API REST do Upstash (HTTP).
+    Isso evita problemas de conexão TCP/SSL comuns em ambientes serverless.
     """
 
     def __init__(self):
-        # Se a biblioteca não foi importada corretamente, aborta a inicialização do cliente
-        if redis is None:
+        if Redis is None:
             self.redis_client = None
             return
 
-        # Conecta usando a variável de ambiente REDIS_URL do Render/Upstash
-        redis_url = os.getenv("REDIS_URL")
+        # Busca as credenciais REST (HTTPS)
+        url = os.getenv("UPSTASH_REDIS_REST_URL")
+        token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
         
-        if not redis_url:
-            logger.warning("⚠️ REDIS_URL não configurada. O cache está desativado.")
+        # Fallback: Tenta ler da REDIS_URL antiga se as novas não existirem (apenas se for formato http)
+        if not url and os.getenv("REDIS_URL", "").startswith("http"):
+             url = os.getenv("REDIS_URL")
+
+        if not url or not token:
+            logger.warning("⚠️ Credenciais UPSTASH (URL/TOKEN) não configuradas. Cache desativado.")
             self.redis_client = None
             return
 
         try:
-            # 2. Configuração de conexão robusta para Upstash
-            # decode_responses=True: Já recebe strings ao invés de bytes
-            # ssl_cert_reqs="none": Essencial para evitar erros de certificado SSL no Upstash
-            self.redis_client = redis.from_url(
-                redis_url, 
-                decode_responses=True, 
-                ssl_cert_reqs="none"
-            )
+            # Conexão via HTTP (não precisa de handshake SSL complexo)
+            self.redis_client = Redis(url=url, token=token)
             
-            # Teste rápido de conexão (Ping)
-            if self.redis_client.ping():
-                logger.info("✅ Conexão com Redis (Upstash) estabelecida com sucesso.")
+            # Teste simples (ping retorna "PONG" string no upstash-redis, ou True)
+            # O upstash-redis geralmente não lança erro na instanciação, só no uso.
+            logger.info("✅ Cliente Redis (HTTP/Upstash) configurado.")
         except Exception as e:
-            logger.error(f"❌ Falha ao conectar ao Redis: {e}")
+            logger.error(f"❌ Erro ao configurar cliente Redis: {e}")
             self.redis_client = None
 
     def get(self, key):
-        """Busca um valor no cache e o desserializa."""
+        """Busca um valor no cache."""
         if self.redis_client is None:
             return None
         
         try:
             data = self.redis_client.get(key)
-            if data:
-                return json.loads(data)
-            return None
-        except Exception:
-            # Em caso de erro de deserialização ou leitura, limpamos a chave e retornamos None
-            logger.warning(f"Erro ao buscar/desserializar chave {key} no Redis.")
-            try:
-                self.redis_client.delete(key)
-            except:
-                pass
+            # O upstash-redis já pode retornar dict se foi salvo como JSON, 
+            # mas por garantia, tratamos strings JSON.
+            if data and isinstance(data, str):
+                try:
+                    return json.loads(data)
+                except json.JSONDecodeError:
+                    return data # Retorna a string pura se não for JSON
+            return data
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao buscar chave {key}: {e}")
             return None
 
     def set(self, key, value, ttl=3600):
-        """Armazena um valor serializado no cache com tempo de expiração (TTL)."""
+        """Salva valor no cache."""
         if self.redis_client is None:
             return False
             
         try:
-            serialized_value = json.dumps(value)
-            # setex define o valor com expiração em segundos
-            self.redis_client.set(key, serialized_value, ex=ttl)
+            # O upstash-redis serializa dicts automaticamente, mas 
+            # usar json.dumps garante controle sobre o formato.
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value)
+
+            # ex=ttl define a expiração em segundos
+            self.redis_client.set(key, value, ex=ttl)
             return True
         except Exception as e:
-            logger.error(f"Erro ao salvar chave {key} no Redis: {e}")
+            logger.error(f"❌ Erro ao salvar chave {key}: {e}")
             return False
 
 # Cria uma instância para uso nas rotas
