@@ -64,59 +64,71 @@ function normalizarUrlDropbox(url) {
     }
 }
 
-// --- NOVA FUNÇÃO PARA O BOTÃO COM LOADING ---
+/// --- NOVA FUNÇÃO CORRIGIDA PARA O BOTÃO COM LOADING ---
 async function gerarRelatorioPDF() {
-    // Seleciona os elementos dentro do formulário/modal existente
+    // 1. Seleciona o formulário e o botão
     const form = document.getElementById('formPdfGeracao');
-    const btn = document.getElementById('btnGerarPdf'); // Botão "Confirmar" dentro do modal
-    
-    // Se for um botão novo fora do modal, ajuste os IDs conforme seu HTML
-    // const btn = document.getElementById('btnSeuNovoBotao'); 
+    const btn = document.getElementById('btnGerarPdf'); 
 
-    // Validação básica do formulário
+    // 2. Validação básica
     if (!form.checkValidity()) {
         alert('⚠️ Preencha todos os campos obrigatórios.');
         form.reportValidity();
         return;
     }
 
-    // Feedback Visual: Altera o texto e desabilita o botão
-    const textoOriginal = btn.innerHTML;
+    // 3. Feedback Visual
+    const textoOriginal = '<span id="iconPDF"><i class="fas fa-file-pdf"></i></span> <span id="textoPDF">Gerar PDF</span>';
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
-    // Coleta os dados do formulário
-    const formData = new FormData(form);
-    const dados = Object.fromEntries(formData.entries());
-
     try {
-        // Fecha o modal para não ficar na frente (opcional)
         $('#modalPdfInfo').modal('hide');
-        
-        // Mostra um alerta de "Iniciando"
         showBootstrapAlert('Iniciando geração do PDF. Isso pode levar alguns minutos...', 'info');
 
-        const response = await fetch('/gerar-pdf', {
+        // 4. PREPARAÇÃO DOS DADOS (A Mágica Acontece Aqui)
+        // Usamos FormData porque seu Python usa request.form e request.files
+        const formData = new FormData(form); 
+        
+        // IMPORTANTE: O Python espera chaves específicas ('nome', 'pi', 'inicio', 'fim').
+        // O FormData pega os 'name' dos inputs do HTML automaticamente.
+        // Se o HTML estiver name="nome_campanha", precisamos ajustar manualmente ou mudar no HTML.
+        // Vamos garantir aqui manualmente para bater com seu Python:
+        
+        // Pega os valores brutos do formulário
+        const rawData = Object.fromEntries(formData.entries());
+        
+        // Cria um novo FormData limpo para enviar ao servidor
+        const dadosParaEnvio = new FormData();
+        dadosParaEnvio.append('nome', rawData.nome_campanha); // Python espera 'nome'
+        dadosParaEnvio.append('pi', rawData.pi_numero);       // Python espera 'pi'
+        dadosParaEnvio.append('inicio', rawData.data_inicio); // Python espera 'inicio'
+        dadosParaEnvio.append('fim', rawData.data_fim);       // Python espera 'fim'
+        
+        // Adiciona a imagem se houver (Python espera 'imagemCampanha')
+        const fileInput = document.getElementById('inputImagem');
+        if (fileInput.files.length > 0) {
+            dadosParaEnvio.append('imagemCampanha', fileInput.files[0]);
+        }
+
+        // 5. REQUISIÇÃO (URL Ajustada)
+        const response = await fetch('/dashboard/gerar-pdf', { // Prefixo /dashboard adicionado
             method: 'POST',
-            // Se seu endpoint esperar JSON:
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nome_campanha: dados.nome_campanha, // Ajuste conforme o 'name' do input no HTML
-                data_inicio: dados.data_inicio,
-                data_fim: dados.data_fim,
-                pi_numero: dados.pi_numero
-            })
-            // Se seu endpoint esperar FormData (multipart), use: body: formData
+            body: dadosParaEnvio 
+            // NÃO defina Content-Type header aqui! O navegador define automaticamente para multipart/form-data com boundaries
         });
 
-        if (!response.ok) throw new Error('Erro ao gerar PDF no servidor.');
+        if (!response.ok) {
+            const erro = await response.json();
+            throw new Error(erro.mensagem || 'Erro ao gerar PDF no servidor.');
+        }
 
-        // Download do Arquivo
+        // 6. DOWNLOAD
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Relatorio_${dados.nome_campanha || 'Campanha'}.pdf`;
+        a.download = `Relatorio_${rawData.nome_campanha || 'Campanha'}.pdf`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -126,11 +138,10 @@ async function gerarRelatorioPDF() {
 
     } catch (error) {
         console.error(error);
-        showBootstrapAlert('Erro ao gerar o relatório. Tente novamente.', 'danger');
-        // Reabre o modal em caso de erro se quiser
+        showBootstrapAlert(`Erro: ${error.message}`, 'danger');
         $('#modalPdfInfo').modal('show');
     } finally {
-        // Restaura o botão
+        // 7. Restaura o botão
         btn.disabled = false;
         btn.innerHTML = textoOriginal;
     }
