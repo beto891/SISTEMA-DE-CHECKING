@@ -41,7 +41,6 @@ class CacheService:
             self.redis_client = redis.from_url(
                 redis_url, 
                 decode_responses=True, 
-                ssl_cert_reqs="none"
             )
             
             # Teste rápido de conexão (Ping)
