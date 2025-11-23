@@ -64,7 +64,77 @@ function normalizarUrlDropbox(url) {
     }
 }
 
+// --- NOVA FUNÇÃO PARA O BOTÃO COM LOADING ---
+async function gerarRelatorioPDF() {
+    // Seleciona os elementos dentro do formulário/modal existente
+    const form = document.getElementById('formPdfGeracao');
+    const btn = document.getElementById('btnGerarPdf'); // Botão "Confirmar" dentro do modal
+    
+    // Se for um botão novo fora do modal, ajuste os IDs conforme seu HTML
+    // const btn = document.getElementById('btnSeuNovoBotao'); 
 
+    // Validação básica do formulário
+    if (!form.checkValidity()) {
+        alert('⚠️ Preencha todos os campos obrigatórios.');
+        form.reportValidity();
+        return;
+    }
+
+    // Feedback Visual: Altera o texto e desabilita o botão
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+
+    // Coleta os dados do formulário
+    const formData = new FormData(form);
+    const dados = Object.fromEntries(formData.entries());
+
+    try {
+        // Fecha o modal para não ficar na frente (opcional)
+        $('#modalPdfInfo').modal('hide');
+        
+        // Mostra um alerta de "Iniciando"
+        showBootstrapAlert('Iniciando geração do PDF. Isso pode levar alguns minutos...', 'info');
+
+        const response = await fetch('/gerar-pdf', {
+            method: 'POST',
+            // Se seu endpoint esperar JSON:
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome_campanha: dados.nome_campanha, // Ajuste conforme o 'name' do input no HTML
+                data_inicio: dados.data_inicio,
+                data_fim: dados.data_fim,
+                pi_numero: dados.pi_numero
+            })
+            // Se seu endpoint esperar FormData (multipart), use: body: formData
+        });
+
+        if (!response.ok) throw new Error('Erro ao gerar PDF no servidor.');
+
+        // Download do Arquivo
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_${dados.nome_campanha || 'Campanha'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        showBootstrapAlert('PDF gerado e baixado com sucesso!', 'success');
+
+    } catch (error) {
+        console.error(error);
+        showBootstrapAlert('Erro ao gerar o relatório. Tente novamente.', 'danger');
+        // Reabre o modal em caso de erro se quiser
+        $('#modalPdfInfo').modal('show');
+    } finally {
+        // Restaura o botão
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+}
 
 // --- FUNÇÕES DE AÇÃO DE MODAIS (PDF, GALERIA, EDIÇÃO, EXCLUSÃO) ---
 
@@ -73,16 +143,6 @@ function abrirModalPdf(campanhaNome) {
     $('#modalPdfInfo').modal('show');
 }
 
-function confirmarGeracao() {
-    const form = document.getElementById('formPdfGeracao');
-    if (!form.checkValidity()) {
-        alert('⚠️ Preencha todos os campos obrigatórios.');
-        form.reportValidity();
-        return;
-    }
-    form.submit();
-    $('#modalPdfInfo').modal('hide');
-}
 
 function abrirGaleria(campanhaId, nomeCampanha) {
     if (!nomeCampanha) {
@@ -419,7 +479,10 @@ $(document).ready(function() {
     
     $('#btnSalvarEdicao').on('click', salvarEdicaoCampanha);
     $('#btnConfirmarExclusaoCampanha').on('click', confirmarExclusaoCampanha);
-    $('#btnGerarPdf').on('click', confirmarGeracao);
+    $('#btnGerarPdf').on('click', function(e) {
+    e.preventDefault(); // Impede o submit padrão do formulário
+    gerarRelatorioPDF();
+    });
     $('#inputImagem').on('change', function() {
         $('#nomeArquivo').val(this.files.length > 0 ? this.files[0].name : 'Nenhum arquivo selecionado');
     });

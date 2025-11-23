@@ -207,8 +207,12 @@
 
             <div class="modal-footer"> <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
     
-                <button type="button" class="btn btn-primary" id="btnGerarPdf">
-                    <i class="fas fa-download mr-1"></i> Gerar PDF
+                <button id="btnGerarPDF" class="btn btn-danger" onclick="gerarRelatorioPDF()">
+                    <span id="iconPDF"><i class="fas fa-file-pdf"></i></span>
+                    
+                    <span id="spinnerPDF" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    
+                    <span id="textoPDF">Gerar PDF</span>
                 </button>
             </div>
         </div>

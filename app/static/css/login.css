@@ -12,8 +12,6 @@ body {
     position: relative; /* Necessário para posicionar elementos absolutamente dentro dele */
 
 }
-
-
         img {
             width: 20%;
             height: auto;
