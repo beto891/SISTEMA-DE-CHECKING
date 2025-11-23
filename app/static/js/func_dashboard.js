@@ -112,10 +112,10 @@ async function gerarRelatorioPDF() {
         }
 
         // 5. REQUISIÇÃO (URL Ajustada)
-        const response = await fetch('/dashboard/gerar-pdf', { // Prefixo /dashboard adicionado
+        const response = await fetch('/gerar-pdf', {
             method: 'POST',
             body: dadosParaEnvio 
-            // NÃO defina Content-Type header aqui! O navegador define automaticamente para multipart/form-data com boundaries
+            
         });
 
         if (!response.ok) {
