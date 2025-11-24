@@ -56,7 +56,7 @@ function successLocation(pos) {
         }).addTo(map);
 
         // Opcional: Centraliza a câmera no usuário na primeira vez que acha
-         map.setView([lat, lng], 16); 
+         //map.setView([lat, lng], 16); 
     } else {
         // Se já existe, só move (para não ficar piscando)
         userMarker.setLatLng([lat, lng]);

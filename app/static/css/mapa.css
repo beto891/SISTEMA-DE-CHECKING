@@ -97,16 +97,16 @@ a,
 
 /* Ícone de localização do usuário (círculo azul pulsante) */
 .user-location-marker {
-    background-color: #42f4aa;
+    background-color: #000000;
     border: 2px solid white;
     border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(66, 173, 244, 0.534);
-    animation: pulse-blue 1.5s infinite;
+    box-shadow: 0 0 0 0 rgba(214, 66, 244, 0.534);
+    animation: pulse-blue 2.5s infinite;
 }
 
 @keyframes pulse-blue {
     0% {
-        box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.7);
+        box-shadow: 0 0 0 0 rgba(131, 40, 123, 0.7);
     }
     70% {
         box-shadow: 0 0 0 10px rgba(66, 133, 244, 0);
