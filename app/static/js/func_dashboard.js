@@ -1,7 +1,7 @@
 /**
  * =================================================================
  * SCRIPT CONSOLIDADO PARA DASHBOARD E MAPA
- * @version 10.1 (Final, Completo e Corrigido)
+ * @version 10.2 (Ajustado para Responsividade Desktop/Mobile)
  * @description Define todas as funções e anexa todos os eventos de forma segura
  * usando um único bloco $(document).ready().
  * =================================================================
@@ -64,19 +64,19 @@ function normalizarUrlDropbox(url) {
     }
 }
 
-// --- VERSÃO "DO JEITO QUE ERA ANTES" (MAS COM SPINNER) ---
+// --- FUNÇÃO DE GERAÇÃO DE PDF ---
 async function gerarRelatorioPDF() {
     const form = document.getElementById('formPdfGeracao');
     const btn = document.getElementById('btnGerarPdf'); 
 
-    // 1. Validação (igual antes)
+    // 1. Validação
     if (!form.checkValidity()) {
         alert('⚠️ Preencha todos os campos obrigatórios.');
         form.reportValidity();
         return;
     }
 
-    // 2. Feedback Visual (A única novidade real)
+    // 2. Feedback Visual
     const conteudoOriginal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
@@ -85,17 +85,15 @@ async function gerarRelatorioPDF() {
         $('#modalPdfInfo').modal('hide');
         showBootstrapAlert('Iniciando geração do PDF...', 'info');
 
-        // 3. O PULO DO GATO 🐈
         const formData = new FormData(form);
 
         // 4. Envio
         const response = await fetch('/gerar-pdf', {
             method: 'POST',
-            body: formData // Envia exatamente o que está no HTML
+            body: formData
         });
 
         if (!response.ok) {
-            // Se o Python devolver 404 ou 500, lemos a mensagem
             const erro = await response.json(); 
             throw new Error(erro.mensagem || 'Erro desconhecido no servidor.');
         }
@@ -106,7 +104,6 @@ async function gerarRelatorioPDF() {
         const a = document.createElement('a');
         a.href = url;
         
-        // Pega o nome direto do formulário para o arquivo
         const nomeArquivo = formData.get('nome') || 'Campanha'; 
         a.download = `Relatorio_${nomeArquivo}.pdf`;
         
@@ -119,7 +116,6 @@ async function gerarRelatorioPDF() {
 
     } catch (error) {
         console.error(error);
-        // Aqui aparecerá o erro real do Python (ex: "Campanha sem registros válidos")
         showBootstrapAlert(`Erro: ${error.message}`, 'danger');
         $('#modalPdfInfo').modal('show');
     } finally {
@@ -187,11 +183,15 @@ async function salvarEdicaoCampanha() {
         showBootstrapAlert(data.mensagem, 'success');
         $('#modalEdicaoCampanha').modal('hide');
 
-        const linhaDaTabela = $(`.btn-galeria[data-id="${campanhaId}"]`).closest('tr');
+        // Atualiza a tabela desktop
+        const linhaDaTabela = $(`.content-desktop .btn-galeria[data-id="${campanhaId}"]`).closest('tr');
         if (linhaDaTabela.length) {
             linhaDaTabela.find('td:first').text(novoNome);
             linhaDaTabela.find('[data-nome]').attr('data-nome', novoNome);
         }
+        // Nota: A atualização dos cards mobile precisa ser feita via recarregamento ou re-renderização do Jinja
+        // Se você usar filtro/pesquisa em JS, precisará atualizar a lista de registros.
+
     } catch (error) {
         console.error('Erro ao salvar edição:', error);
         showBootstrapAlert(`Falha ao salvar: ${error.message}`, 'danger');
@@ -199,22 +199,20 @@ async function salvarEdicaoCampanha() {
 }
 
 /**
- * ✅ FUNÇÃO AJUSTADA: Agora ela SÓ prepara e abre o modal de exclusão.
+ * Prepara e abre o modal de exclusão de campanha.
  */
 function abrirModalExclusaoCampanha(campanhaId, campanhaNome) {
     const modal = $('#confirmacaoExclusaoModal');
     
-    // Preenche o modal com os dados da campanha
     modal.find('#nomeCampanhaParaExcluir').text(campanhaNome);
     
-    // Armazena o ID no próprio botão de confirmação para ser lido depois pelo ouvinte de evento
     modal.find('#btnConfirmarExclusaoCampanha').data('campanha-id', campanhaId);
 
     modal.modal('show');
 }
 
 /**
- * ✅ FUNÇÃO AJUSTADA: Chamada pelo ouvinte de evento fixo.
+ * Executa a exclusão de campanha via API.
  */
 async function confirmarExclusaoCampanha() {
     const campanhaId = $('#btnConfirmarExclusaoCampanha').data('campanha-id');
@@ -231,7 +229,10 @@ async function confirmarExclusaoCampanha() {
         if (!response.ok) throw new Error(data.mensagem || 'Erro ao excluir.');
         
         showBootstrapAlert(data.mensagem, 'success');
-        $(`.btn-galeria[data-id="${campanhaId}"]`).closest('tr').remove();
+        
+        // Remove a linha da tabela desktop e o card mobile
+        $(`[data-id="${campanhaId}"]`).closest('tr, .campaign-card').remove(); 
+
     } catch (error) {
         console.error('Erro ao excluir campanha:', error);
         showBootstrapAlert(`Erro: ${error.message}`, 'danger');
@@ -239,7 +240,6 @@ async function confirmarExclusaoCampanha() {
 }
 
 // --- FUNÇÕES DA GALERIA ---
-
 async function carregarImagens(mostrarLixeira) {
     const container = document.getElementById('galeriaContainer');
     const nomeCampanha = $('#modalGaleria').data('campanha-nome');
@@ -355,23 +355,22 @@ $(document).ready(function() {
     console.log("DOM carregado. Anexando todos os ouvintes de evento...");
 
     // --- CARREGAMENTO INICIAL DO DASHBOARD ---
-    // Chama a função do arquivo 'campanhas_map.js' para carregar o mapa inicial.
-    // Certifique-se de que o arquivo 'campanhas_map.js' foi carregado antes deste.
     if (typeof recarregarMapaComCampanhasAtivas === 'function') {
         recarregarMapaComCampanhasAtivas();
     } else {
         console.error("A função 'recarregarMapaComCampanhasAtivas' não foi encontrada. Verifique a ordem de importação dos seus scripts.");
     }
-    // Se você tiver uma função para o gráfico, chame-a aqui também.
-    // Ex: recarregarGraficoComCampanhasAtivas();
 
-
-    // --- GERENCIADOR DE CLIQUES DELEGADO PARA A TABELA PRINCIPAL ---
-    $('#tabelaCampanhas').on('click', function(event) {
+    // =======================================================
+    // ✅ AJUSTE PRINCIPAL 1: Unificação do Gerenciador de Cliques 
+    // Anexa os cliques em ambos os contêineres: Tabela (#tabelaCampanhas) e Cartões (#mobileCampanhasContainer)
+    // =======================================================
+    $('#tabelaCampanhas, #mobileCampanhasContainer').on('click', function(event) {
         const target = event.target;
         
         const pdfButton = target.closest('.btn-pdf');
         if (pdfButton) {
+            // dataset funciona em botões de ambos os layouts
             abrirModalPdf(pdfButton.dataset.nome);
             return;
         }
@@ -380,6 +379,9 @@ $(document).ready(function() {
             abrirGaleria(galleryButton.dataset.id, galleryButton.dataset.nome);
             return;
         }
+        
+        // Estes botões estão primariamente (ou exclusivamente) no desktop (dropdown),
+        // mas são delegados pelo clique no container de desktop.
         const editButton = target.closest('.btn-editar-campanha');
         if (editButton) {
             editarCampanha(editButton.dataset.id);
@@ -392,30 +394,27 @@ $(document).ready(function() {
         }
     });
 
-    /**
-     * ✅ NOVO: Gerenciador de mudança para o checkbox de status da campanha.
-     */
-    // Cole este código dentro do seu $(document).ready(function() { ... });
-
-    /**
-     * ✅ VERSÃO CORRIGIDA
-     * Gerenciador de mudança para o checkbox de status da campanha.
-     * Agora atualiza TODAS as entradas da campanha pelo NOME.
-     */
-    $('#tabelaCampanhas').on('change', '.campaign-status-checkbox', async function() {
+    // =======================================================
+    // ✅ AJUSTE PRINCIPAL 2: Unificação do Gerenciador de Status (Checkbox/Switch)
+    // Anexa a mudança de status em ambos os contêineres.
+    // =======================================================
+    $('#tabelaCampanhas, #mobileCampanhasContainer').on('change', '.campaign-status-checkbox', async function() {
+        // O restante da lógica permanece igual, pois ele lê o 'data-nome' do checkbox, 
+        // que é o mesmo em ambos os layouts (desktop e mobile-status-{{ r.id }})
+        
         // 1. Pega o NOME da campanha, e não mais o ID
         const checkbox = $(this);
         const campanhaNome = checkbox.data('nome');
         const isConcluida = checkbox.is(':checked');
 
-        // Validação para garantir que o nome foi pego
+        // Validação
         if (!campanhaNome) {
             showBootstrapAlert('Erro: Não foi possível identificar a campanha.', 'danger');
             return;
         }
 
         try {
-            // 2. Chama a NOVA rota da API
+            // 2. Chama a rota da API
             const response = await fetch(`/api/campaign/status-by-name`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -431,7 +430,7 @@ $(document).ready(function() {
 
             showBootstrapAlert(data.mensagem, 'success');
 
-            // Atualiza o mapa para refletir a mudança (remover/adicionar pontos)
+            // Atualiza o mapa para refletir a mudança
             if (typeof recarregarMapaComCampanhasAtivas === 'function') {
                 recarregarMapaComCampanhasAtivas();
             }
@@ -450,7 +449,7 @@ $(document).ready(function() {
         }
     });
 
-    // --- GERENCIADORES DE CLIQUES PARA MODAIS E GALERIA ---
+    // --- GERENCIADORES DE CLIQUES PARA MODAIS E GALERIA (Inalterados, pois já usavam seletores mais genéricos) ---
 
     $('#galeriaTabs').on('click', '.nav-link', function(e) {
         e.preventDefault();
@@ -472,8 +471,8 @@ $(document).ready(function() {
     $('#btnSalvarEdicao').on('click', salvarEdicaoCampanha);
     $('#btnConfirmarExclusaoCampanha').on('click', confirmarExclusaoCampanha);
     $('#btnGerarPdf').on('click', function(e) {
-    e.preventDefault(); // Impede o submit padrão do formulário
-    gerarRelatorioPDF();
+        e.preventDefault(); // Impede o submit padrão do formulário
+        gerarRelatorioPDF();
     });
     $('#inputImagem').on('change', function() {
         $('#nomeArquivo').val(this.files.length > 0 ? this.files[0].name : 'Nenhum arquivo selecionado');

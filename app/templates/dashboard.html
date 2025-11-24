@@ -62,85 +62,124 @@
 
 
 <div class="container-fluid px-5 mt-4">
-<div class="filtros form-row mb-1 align-items-end">
-    
-    <div class="col-md-auto form-group">
-        <label for="status"><b>Status:</b></label>
-        <select id="status" class="form-control form-control-sm">
-            <option value="todos">Todos</option>
-            <option value="aberto">Meta atingida</option>
-            <option value="fechado">Abaixo da meta</option>
-        </select>
+    <div class="filtros form-row mb-1 align-items-end">
+        <div class="col-md-auto form-group">
+            <label for="status"><b>Status:</b></label>
+            <select id="status" class="form-control form-control-sm">
+                <option value="todos">Todos</option>
+                <option value="aberto">Meta atingida</option>
+                <option value="fechado">Abaixo da meta</option>
+            </select>
+        </div>
     </div>
-</div>
-
+    
     <h2>📋 Resumo </h2>
-<div class="tabela-scroll">
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Campanha</th>
-                <th>Espaços Totais</th>
-                <th>Uploads Recebidos</th>
-                <th>% Coberto</th>
-                <th>Status da Meta</th>
-                <th>Ações</th>
-                <th>Concluída</th>
-            </tr>
-        </thead>
-       <tbody id="tabelaCampanhas">
-    {% for r in registros %}
-    <tr>
-        <td>{{ r.campanha }}</td>
-        <td>{{ r.espacos }}</td>
-        <td>{{ r.imagens }}</td>
-        <td>{{ r.percentual }}%</td>
-        <td>
-            {% if r.meta %} ✅ Meta atingida {% else %} ⚠️ Abaixo da meta {% endif %}
-        </td>
-        
-        <td>
-            <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}">
-                <i class="fas fa-file-pdf"></i> Gerar PDF
-            </button>
-            
-            <button class="btn btn-sm btn-dark btn-galeria" 
-                    data-id="{{ r.id }}" 
-                    data-nome="{{ r.campanha }}">
-                <i class="fas fa-images"></i> Galeria
-            </button>
 
-            <div class="dropdown d-inline">
-                <button class="btn btn-sm" type="button" data-toggle="dropdown" style="background: transparent; border: none;">
-                    <i class="fas fa-ellipsis-v text-dark"></i>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right">
-                    <button class="dropdown-item btn-editar-campanha" data-id="{{ r.id }}">
-                        <i class="fas fa-edit mr-2"></i> Editar
+    <div class="content-desktop">
+        <div class="tabela-scroll">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Campanha</th>
+                        <th>Espaços Totais</th>
+                        <th>Uploads Recebidos</th>
+                        <th>% Coberto</th>
+                        <th>Status da Meta</th>
+                        <th>Ações</th>
+                        <th>Concluída</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCampanhas">
+                {% for r in registros %}
+                <tr>
+                    <td>{{ r.campanha }}</td>
+                    <td>{{ r.espacos }}</td>
+                    <td>{{ r.imagens }}</td>
+                    <td>{{ r.percentual }}%</td>
+                    <td>
+                        {% if r.meta %} ✅ Meta atingida {% else %} ⚠️ Abaixo da meta {% endif %}
+                    </td>
+                    
+                    <td>
+                        <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
+                        <button class="btn btn-sm btn-dark btn-galeria" data-id="{{ r.id }}" data-nome="{{ r.campanha }}"><i class="fas fa-images"></i> Galeria</button>
+                        <div class="dropdown d-inline">
+                            <button class="btn btn-sm" type="button" data-toggle="dropdown" style="background: transparent; border: none;"><i class="fas fa-ellipsis-v text-dark"></i></button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <button class="dropdown-item btn-editar-campanha" data-id="{{ r.id }}"><i class="fas fa-edit mr-2"></i> Editar</button>
+                                <button class="dropdown-item btn-excluir-campanha" data-id="{{ r.id }}" data-nome="{{ r.campanha }}"><i class="fas fa-trash mr-2"></i> Excluir</button>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input campaign-status-checkbox" id="status-{{ r.id }}" data-id="{{ r.id }}" data-nome="{{ r.campanha }}" {% if r.concluida %}checked{% endif %}>
+                            <label class="custom-control-label" for="status-{{ r.id }}"></label>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="content-mobile" id="mobileCampanhasContainer">
+        {% for r in registros %}
+        {% set status_meta = '✅ Meta atingida' if r.meta else '⚠️ Abaixo da meta' %}
+        {% set status_class = 'meta-atingida' if r.meta else 'abaixo-meta' %}
+        
+        <div class="campaign-card">
+            <div class="card-header-mobile">
+                <h4 class="campaign-title">{{ r.campanha }}</h4>
+            </div>
+
+            <div class="card-body-mobile">
+                
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="col-8 p-0">
+                         <div class="progress mb-2" style="height: 15px;">
+                            <div class="progress-bar {% if r.meta %}bg-success{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ r.percentual }}%;" aria-valuenow="{{ r.percentual }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <h1 class="percentage-mobile">{{ r.percentual }}%</h1>
+                    </div>
+                    <span class="badge {{ status_class }}">{{ status_meta }}</span>
+                </div>
+
+                <div class="details-mobile mb-3">
+                    <span>Espaços: <b>{{ r.espacos }}</b></span><br>
+                    <span>Uploads: <b>{{ r.imagens }}</b></span>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-primary btn-block mr-2 btn-pdf" data-nome="{{ r.campanha }}">
+                        <i class="fas fa-file-pdf"></i> PDF
                     </button>
-                    <button class="dropdown-item btn-excluir-campanha" data-id="{{ r.id }}" data-nome="{{ r.campanha }}">
-                        <i class="fas fa-trash mr-2"></i> Excluir
+                    
+                    <button class="btn btn-sm btn-dark btn-block btn-galeria" 
+                        data-id="{{ r.id }}" 
+                        data-nome="{{ r.campanha }}">
+                        <i class="fas fa-images"></i> Galeria
                     </button>
                 </div>
+                
+                <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top">
+                    <span class="mr-2 text-muted small">Concluída</span>
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" 
+                            class="custom-control-input campaign-status-checkbox" 
+                            id="mobile-status-{{ r.id }}" 
+                            data-id="{{ r.id }}" 
+                            data-nome="{{ r.campanha }}"
+                            {% if r.concluida %}checked{% endif %}>
+                        <label class="custom-control-label" for="mobile-status-{{ r.id }}"></label>
+                    </div>
+                </div>
             </div>
-        </td>
-
-        <td>
-            <div class="custom-control custom-switch">
-                    <input type="checkbox" 
-                        class="custom-control-input campaign-status-checkbox" 
-                        id="status-{{ r.id }}" 
-                        data-id="{{ r.id }}"  data-nome="{{ r.campanha }}"
-                       {% if r.concluida %}checked{% endif %}>
-                <label class="custom-control-label" for="status-{{ r.id }}"></label>
-            </div>
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
-    </table>
-</div>
-</div>
+        </div>
+        {% endfor %}
+    </div>
 <div class="modal fade" id="modalPdfInfo" tabindex="-1" aria-labelledby="modalPdfLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow-sm border-0">

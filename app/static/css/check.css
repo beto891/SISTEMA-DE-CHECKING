@@ -289,3 +289,90 @@ body, .tabela-scroll {
     display: inline-block;
     align-items: flex-end;
 }
+
+/* ================================================= */
+/* ESTILOS MOBILE FIRST (Default para Telas Pequenas) */
+/* ================================================= */
+
+/* Esconde a tabela Desktop por padrão */
+.content-desktop {
+    display: none; 
+}
+
+/* Mostra os cartões Mobile por padrão */
+.content-mobile {
+    display: block; 
+    padding-top: 20px; /* Espaçamento extra no topo */
+}
+
+/* Estilo Básico do Cartão */
+.campaign-card {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    padding: 15px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Estilo do Título do Cartão */
+.campaign-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #343a40;
+}
+
+/* Estilo do Percentual em Destaque */
+.percentage-mobile {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2c3e50; /* Cor escura para destaque */
+    line-height: 1;
+}
+
+/* Estilos das Tags de Status */
+.badge {
+    padding: 0.5em 0.7em;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 0.25rem;
+    height: fit-content;
+}
+.meta-atingida {
+    background-color: #d4edda;
+    color: #155724;
+}
+.abaixo-meta {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Detalhes menores */
+.details-mobile {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Ajuste dos botões dentro do card para mobile */
+.campaign-card .btn-pdf,
+.campaign-card .btn-galeria {
+    font-size: 0.9rem;
+    padding: 8px 10px;
+}
+
+/* ================================================= */
+/* MEDIA QUERY (Desktop/Tablet) */
+/* ================================================= */
+@media screen and (min-width: 768px) {
+    
+    /* 1. Mostra a Tabela no Desktop */
+    .content-desktop {
+        display: block; 
+    }
+
+    /* 2. Esconde os Cartões no Desktop */
+    .content-mobile {
+        display: none; 
+    }
+}
