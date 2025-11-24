@@ -6,11 +6,11 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     min-height: 100vh;
-    display: flex; /* Transforma o body em um contêiner flex */
-    justify-content: center; /* Centraliza o conteúdo horizontalmente */
-    align-items: center; /* Centraliza o conteúdo verticalmente */
-    position: relative; /* Necessário para posicionar elementos absolutamente dentro dele */
-
+    
+    /* Configuração Flexbox para empurrar o footer */
+    display: flex;
+    flex-direction: column; /* IMPORTANTE: Organiza verticalmente */
+    position: relative;
 }
         img {
             width: 20%;
@@ -106,12 +106,6 @@ body {
     z-index: 1; 
     }
 
-    
-    .container {
-        position: relative; 
-        z-index: -1;
-        
-    }
 
     .roda-pe {
         margin-top: 20px;
@@ -133,15 +127,13 @@ body {
 
     }
 
-   .container {
-    position: absolute; 
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%); /* Ajusta a posição para o centro exato */
+  .container {
+    flex: 1; /* Faz o container ocupar todo o espaço disponível */
     display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1; /* Mantenha abaixo do formulário */
+    justify-content: center; /* Centraliza horizontalmente */
+    align-items: center; /* Centraliza verticalmente */
+    position: relative;
+    z-index: 2; /* Garante que fique acima das partículas */
 }
     .container i{
         position: absolute;
@@ -149,4 +141,12 @@ body {
         border: 2px solid #fcfbf8;
         transition: .5s;
         z-index: 1;
+    }
+
+    footer {
+        width: 100%;
+        padding: 10px 0;
+        text-align: center;
+        z-index: 2; /* Acima das partículas */
+        background: transparent; /* Opcional */
     }
