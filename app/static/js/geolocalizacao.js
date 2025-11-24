@@ -1,43 +1,52 @@
-// Variáveis globais para controlar o marcador do usuário
+// Variáveis globais para controle
 let userMarker = null;
 let userCircle = null;
-let watchId = null; // Para poder parar o rastreamento se necessário
+let watchId = null;
 
+// 1. Função Principal (A Receita)
 function iniciarRastreamentoUsuario() {
-    if (!navigator.geolocation) {
-        console.log("Geolocalização não é suportada pelo seu navegador.");
+    // Verifica se o mapa existe (foi criado pelo outro script)
+    if (typeof map === 'undefined' || map === null) {
+        console.warn("Mapa ainda não carregado. Tentando novamente em 1s...");
+        setTimeout(iniciarRastreamentoUsuario, 1000);
         return;
     }
 
-    // Opções para alta precisão (GPS)
+    if (!navigator.geolocation) {
+        console.log("Navegador não suporta geolocalização.");
+        return;
+    }
+
+    console.log("📍 Iniciando rastreamento GPS...");
+    
     const options = {
         enableHighAccuracy: true, 
         timeout: 10000,
         maximumAge: 0
     };
 
-    // Inicia o monitoramento (watchPosition atualiza sempre que mudar)
-    watchId = navigator.geolocation.watchPosition(success, error, options);
+    // Começa a vigiar a posição
+    watchId = navigator.geolocation.watchPosition(successLocation, errorLocation, options);
 }
 
-function success(pos) {
+// 2. Sucesso: Desenha/Atualiza o ícone
+function successLocation(pos) {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
-    const accuracy = pos.coords.accuracy; // Precisão em metros
+    const accuracy = pos.coords.accuracy;
 
-    // 1. Se o marcador ainda não existe, cria ele
+    // Define o ícone (precisa do CSS que te passei antes)
+    const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+
+    // Se o marcador não existe, cria
     if (!userMarker) {
-        // Cria o ícone personalizado via CSS
-        const userIcon = L.divIcon({
-            className: 'user-location-marker',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8] // Centraliza o ponto
-        });
-
         userMarker = L.marker([lat, lng], {icon: userIcon}).addTo(map);
-        userMarker.bindPopup("<b>Você está aqui</b>").openPopup();
-
-        // Círculo azul claro indicando a área de precisão
+        userMarker.bindPopup("<b>Você está aqui</b>");
+        
         userCircle = L.circle([lat, lng], {
             radius: accuracy,
             color: '#4285F4',
@@ -46,26 +55,23 @@ function success(pos) {
             weight: 1
         }).addTo(map);
 
-        // Centraliza o mapa no usuário na primeira vez
-        map.setView([lat, lng], 15);
+        // Opcional: Centraliza a câmera no usuário na primeira vez que acha
+        // map.setView([lat, lng], 16); 
     } else {
-        // 2. Se já existe, apenas atualiza a posição (animação suave)
+        // Se já existe, só move (para não ficar piscando)
         userMarker.setLatLng([lat, lng]);
         userCircle.setLatLng([lat, lng]);
         userCircle.setRadius(accuracy);
     }
-
-    // (Opcional) Enviar localização para o backend se você tiver aquela rota configurada
-    // enviarLocalizacaoParaBackend(lat, lng);
 }
 
-function error(err) {
+// 3. Erro
+function errorLocation(err) {
     console.warn(`ERRO GPS (${err.code}): ${err.message}`);
-    if (err.code === 1) {
-        alert("Por favor, permita o acesso à localização para ver sua posição no mapa.");
-    }
 }
 
-// --- INTEGRAÇÃO: Chame essa função na inicialização do seu mapa ---
-// Procure onde você tem algo como $(document).ready ou initMap e adicione:
-// iniciarRastreamentoUsuario();
+// --- O GATILHO AUTOMÁTICO (O que faltava) ---
+$(document).ready(function() {
+    // Chama a função assim que a página estiver pronta
+    iniciarRastreamentoUsuario();
+});
