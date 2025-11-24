@@ -38,7 +38,7 @@ function successLocation(pos) {
     // Define o ícone (precisa do CSS que te passei antes)
     const userIcon = L.divIcon({
         className: 'user-location-marker',
-        iconSize: [20, 20],
+        iconSize: [50, 50],
         iconAnchor: [50, 50]
     });
 

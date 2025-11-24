@@ -384,22 +384,84 @@ document.addEventListener('DOMContentLoaded', function() {
         fetchAndDisplayUserLocations();
     }
 
-    // --- Ouvinte de Evento para o Campo de Busca do Mapa ---
-    const campoBusca = document.getElementById('campoBuscaMapa');
-    if (campoBusca) {
-        campoBusca.addEventListener('input', () => {
-            const valor = campoBusca.value.trim();
-            if (valor.length >= 2) {
-                buscarNoMapa(valor);
-            } else {
-                if (map) {
-                    map.setView([-23.5505, -46.6333], 5);
-                    map.closePopup();
+// --- LÓGICA DE BUSCA UNIFICADA (Desktop e Mobile) ---
+    
+    // 1. Ao digitar (Input)
+    $('#campoBuscaMapa, #campoBuscaMapaMobile').on('input', function() {
+        const input = $(this);
+        const termo = input.val().trim().toLowerCase();
+        const isMobile = input.attr('id') === 'campoBuscaMapaMobile';
+        
+        // Define qual lista de sugestões usar (Mobile ou Desktop)
+        const listaSugestoes = isMobile ? $('#sugestoesBuscaMobile') : $('#sugestoesBusca');
+
+        listaSugestoes.empty(); // Limpa sugestões anteriores
+
+        if (termo.length < 2) {
+            listaSugestoes.hide();
+            return;
+        }
+
+        // Filtra os dados do clusterGroup
+        const resultados = [];
+        const maxSugestoes = 5;
+
+        if (clusterGroup) {
+            clusterGroup.eachLayer(layer => {
+                if (resultados.length >= maxSugestoes) return;
+
+                const cod = (layer.options.espacoCod || '').toLowerCase();
+                const campanhas = layer.options.campanhas || [];
+                const encontrouNome = campanhas.some(c => (c.nome || '').toLowerCase().includes(termo));
+
+                if (cod.includes(termo) || encontrouNome) {
+                    resultados.push({
+                        texto: encontrouNome ? campanhas.find(c => c.nome.toLowerCase().includes(termo)).nome : cod,
+                        tipo: encontrouNome ? 'Campanha' : 'Espaço'
+                    });
                 }
-                ajustarLayoutAposZoom();
+            });
+        }
+
+        // Renderiza as sugestões
+        if (resultados.length > 0) {
+            resultados.forEach(item => {
+                const li = $(`<li class="list-group-item list-group-item-action cursor-pointer" style="cursor: pointer;">
+                                <small class="text-muted" style="font-size: 0.8em;">[${item.tipo}]</small> ${item.texto}
+                              </li>`);
+                
+                li.on('click', function() {
+                    input.val(item.texto);
+                    listaSugestoes.hide();
+                    buscarNoMapa(item.texto); // Chama sua função de busca original
+                });
+
+                listaSugestoes.append(li);
+            });
+            listaSugestoes.show();
+        } else {
+            listaSugestoes.hide();
+        }
+    });
+
+    // 2. Esconde a lista ao clicar fora
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.gradient-border').length) {
+            $('#sugestoesBusca, #sugestoesBuscaMobile').hide();
+        }
+    });
+
+    // 3. Ao apertar ENTER
+    $('#campoBuscaMapa, #campoBuscaMapaMobile').on('keypress', function(e) {
+        if (e.which === 13) { // Tecla Enter
+            e.preventDefault();
+            const termo = $(this).val().trim();
+            if (termo) {
+                buscarNoMapa(termo);
+                $('#sugestoesBusca, #sugestoesBuscaMobile').hide();
             }
-        });
-    }
+        }
+    });
 
     // --- Ouvinte de Evento para o Botão de Upload de Foto ---
     const uploadBtn = document.getElementById('uploadBtn');
