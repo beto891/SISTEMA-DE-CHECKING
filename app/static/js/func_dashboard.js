@@ -139,7 +139,7 @@ function abrirGaleria(campanhaId, nomeCampanha) {
     }
     const galeriaModal = $('#modalGaleria');
     galeriaModal.data('campanha-nome', nomeCampanha);
-    galeriaModal.find('#modalGaleriaLabel').text(`Campanha: ${nomeCampanha}`);
+    //galeriaModal.find('#modalGaleriaLabel').text(`Campanha: ${nomeCampanha}`);
     $('#galeriaTabs .nav-link').removeClass('active');
     $('#tabAtivas').addClass('active');
     galeriaModal.modal('show');
@@ -264,10 +264,19 @@ async function carregarImagens(mostrarLixeira) {
 
 async function renderizarGaleria(imagens, isLixeira) {
     const container = document.getElementById('galeriaContainer');
+    
+    // 1. MODIFICAÇÃO NO INÍCIO: Capturar o modal e o nome da campanha.
+    const galeriaModal = $('#modalGaleria');
+    const nomeCampanha = galeriaModal.data('campanha-nome');
+
     if (!imagens || imagens.length === 0) {
         renderizarMensagem(container, 'Nenhuma imagem encontrada.', 'info');
+        // Atualiza o título para 0 fotos, caso não haja imagens
+        galeriaModal.find('#modalGaleriaLabel').text(`Galeria - ${nomeCampanha} (0 Fotos)`);
         return;
     }
+    
+    // O restante do código de processamento de cards...
     const promessasDosCards = imagens.map(img => new Promise(resolve => {
         if (!img || !img.url || !img.path || !img.id) {
             console.warn('Objeto de imagem inválido ou sem ID, descartando:', img);
@@ -301,13 +310,24 @@ async function renderizarGaleria(imagens, isLixeira) {
         };
         imageLoader.src = urlFinal;
     }));
+    
     const cardsRenderizaveis = (await Promise.all(promessasDosCards)).filter(card => card);
+
     if (cardsRenderizaveis.length > 0) {
         container.innerHTML = `<div class="row">${cardsRenderizaveis.join('')}</div>`;
+        
+        // 2. MODIFICAÇÃO APÓS RENDERIZAÇÃO: Atualizar o contador final
+        const contagemFinal = cardsRenderizaveis.length;
+        galeriaModal.find('#modalGaleriaLabel').text(`Galeria - ${nomeCampanha} (${contagemFinal} Fotos)`);
+        
     } else {
         renderizarMensagem(container, 'Nenhuma imagem válida pôde ser carregada.', 'warning');
+        
+        // 2. MODIFICAÇÃO APÓS RENDERIZAÇÃO: Atualizar para 0 fotos se a filtragem falhar
+        galeriaModal.find('#modalGaleriaLabel').text(`Galeria - ${nomeCampanha} (0 Fotos)`);
     }
 }
+
 
 function confirmarAcaoImagem(acao, id, nome) {
     const modal = $('#modalConfirmacao');

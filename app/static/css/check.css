@@ -361,18 +361,29 @@ body, .tabela-scroll {
     padding: 8px 10px;
 }
 
+
 /* ================================================= */
 /* MEDIA QUERY (Desktop/Tablet) */
 /* ================================================= */
 @media screen and (min-width: 768px) {
     
-    /* 1. Mostra a Tabela no Desktop */
     .content-desktop {
         display: block; 
     }
-
-    /* 2. Esconde os Cartões no Desktop */
     .content-mobile {
         display: none; 
+    }
+}
+
+.desktop-only {
+
+    display: none; 
+}
+
+@media screen and (min-width: 768px) {
+    
+    .desktop-only {
+
+        display: block !important; 
     }
 }
