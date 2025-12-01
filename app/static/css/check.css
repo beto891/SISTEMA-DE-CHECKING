@@ -294,18 +294,21 @@ body, .tabela-scroll {
 /* ESTILOS MOBILE FIRST (Default para Telas Pequenas) */
 /* ================================================= */
 
-/* Esconde a tabela Desktop por padrão */
+/* --- ESTILOS MOBILE FIRST --- */
+
+.desktop-only {
+    display: none; 
+}
+
 .content-desktop {
     display: none; 
 }
 
-/* Mostra os cartões Mobile por padrão */
 .content-mobile {
     display: block; 
-    padding-top: 20px; /* Espaçamento extra no topo */
+    padding-top: 20px;
 }
 
-/* Estilo Básico do Cartão */
 .campaign-card {
     background-color: #fff;
     border: 1px solid #dee2e6;
@@ -315,7 +318,6 @@ body, .tabela-scroll {
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-/* Estilo do Título do Cartão */
 .campaign-title {
     font-size: 1.1rem;
     font-weight: 600;
@@ -323,21 +325,20 @@ body, .tabela-scroll {
     color: #343a40;
 }
 
-/* Estilo do Percentual em Destaque */
 .percentage-mobile {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #2c3e50; /* Cor escura para destaque */
+    color: #2c3e50;
     line-height: 1;
 }
 
-/* Estilos das Tags de Status */
 .badge {
     padding: 0.5em 0.7em;
     font-size: 0.8rem;
     font-weight: 600;
     border-radius: 0.25rem;
     height: fit-content;
+    white-space: nowrap;
 }
 .meta-atingida {
     background-color: #d4edda;
@@ -348,17 +349,44 @@ body, .tabela-scroll {
     color: #721c24;
 }
 
-/* Detalhes menores */
 .details-mobile {
     font-size: 0.85rem;
     color: #6c757d;
 }
 
-/* Ajuste dos botões dentro do card para mobile */
+/* --- AJUSTES DE ALINHAMENTO DOS BOTÕES NO CARD --- */
+
 .campaign-card .btn-pdf,
 .campaign-card .btn-galeria {
+    height: 100%;
     font-size: 0.9rem;
     padding: 8px 10px;
+    flex-grow: 1;
+}
+
+.campaign-card .btn-pdf {
+    margin-right: 8px !important;
+}
+
+.campaign-card .btn-galeria {
+    margin-left: 0 !important;
+}
+
+/* --- MEDIA QUERY (Desktop/Tablet) --- */
+
+@media screen and (min-width: 768px) {
+    
+    .desktop-only {
+        display: block !important; 
+    }
+
+    .content-desktop {
+        display: block; 
+    }
+
+    .content-mobile {
+        display: none; 
+    }
 }
 
 

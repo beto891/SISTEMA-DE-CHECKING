@@ -3,9 +3,8 @@ $(document).ready(function() {
 const alertsContainer = $('#critical-alerts');
 const hoje = new Date();
 hoje.setHours(0, 0, 0, 0);
-const delayMs = 500; // Atraso entre cada notificação
+const delayMs = 500;
 
-// Função para tocar o som de notificação
 function tocarSomDeNotificacao() {
     const som = document.getElementById('notificationSound');
     if (som) {
@@ -70,7 +69,7 @@ campanhasComAlerta.forEach((campanha, index) => {
         if (alertHtml) {
             const newToast = $(alertHtml).appendTo(alertsContainer);
             newToast.toast('show');
-            tocarSomDeNotificacao(); // Chama a função para tocar o som
+            tocarSomDeNotificacao();
         }
     }, index * delayMs);
 });
