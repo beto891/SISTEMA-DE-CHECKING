@@ -16,6 +16,8 @@ from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 from sqlalchemy import text 
 
+from services.celery_config import celery_app
+
 # ✅ Definição Global de Cor
 magenta = Color(0.95, 0.2, 0.5)
 
@@ -115,6 +117,32 @@ def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
         })
     return resultado
 
+# =======================================================
+# ✅ FUNÇÃO PRINCIPAL TRANSFORMADA EM TAREFA CELERY
+# =======================================================
+@celery_app.task(bind=True, name='tasks.gerar_pdf_relatorio')
+def gerar_pdf_task(self, nome_campanha, pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica=None):
+    
+    # 1. Obtenção de Registros (Chamada dentro da Task!)
+    registros = gerar_registros_dinamicos_por_campanha(nome_campanha)
+    
+    # 2. Chama a função de processamento pesado
+    caminho_pdf = gerar_pdf_por_nome(
+        registros=registros,
+        nome_campanha=nome_campanha,
+        pi_numero=pi_numero,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        imagem_dinamica=imagem_dinamica # Note: Passar FileStorage aqui pode ser complexo, passe o caminho se for o caso.
+    )
+
+    if not caminho_pdf:
+        # A tarefa falhou em gerar o PDF
+        raise Exception("Nenhum registro válido para gerar PDF.")
+        
+    # 3. Retorna o caminho do arquivo gerado
+    return caminho_pdf
+
 # --- FUNÇÃO PRINCIPAL OTIMIZADA (SEM THREAD POOL / BAIXO CONSUMO DE RAM) ---
 def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica=None):
     
@@ -185,26 +213,39 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
     c.drawString(8.8 * cm, 1.5 * cm, "bdrops.tv - contato@bdrops.tv - (11) 3078-0879")
     c.showPage()
 
-    # === IMAGEM DE CAPA (DINÂMICA) ===
     if imagem_dinamica:
-        stream = getattr(imagem_dinamica, "stream", None)
-        if stream:
-            try:
-                stream.seek(0)
-                img_reader = ImageReader(stream)
-                iw, ih = img_reader.getSize()
-                escala = min(largura / iw, altura / ih)
-                iw *= escala
-                ih *= escala
-                x = (largura - iw) / 2
-                y = (altura - ih) / 2
-                c.setFillColorRGB(1, 1, 1)
-                c.rect(0, 0, largura, altura, fill=True, stroke=False)
-                c.drawImage(img_reader, x, y, width=iw, height=ih, preserveAspectRatio=True, mask='auto')
-                c.showPage()
-                del img_reader # Libera memória
-            except Exception as e:
-                print(f"⚠️ Erro ao renderizar imagem da campanha: {e}")
+        caminho_imagem_path = imagem_dinamica # Assumindo que o nome do parâmetro é 'imagem_dinamica'
+
+        try:
+            # Verifica se o caminho existe e não é nulo
+            if os.path.exists(caminho_imagem_path):
+                
+                # 1. Abre o arquivo do disco no modo binário de leitura
+                with open(caminho_imagem_path, 'rb') as f:
+                    # 2. Carrega o conteúdo na memória como um stream
+                    stream = io.BytesIO(f.read())
+                
+                # 3. Processamento ReportLab com o stream na memória
+                if stream:
+                    stream.seek(0)
+                    img_reader = ImageReader(stream)
+                    iw, ih = img_reader.getSize()
+                    escala = min(largura / iw, altura / ih)
+                    iw *= escala
+                    ih *= escala
+                    x = (largura - iw) / 2
+                    y = (altura - ih) / 2
+                    c.setFillColorRGB(1, 1, 1)
+                    c.rect(0, 0, largura, altura, fill=True, stroke=False)
+                    c.drawImage(img_reader, x, y, width=iw, height=ih, preserveAspectRatio=True, mask='auto')
+                    c.showPage()
+                    del img_reader # Libera memória
+
+            else:
+                print(f"⚠️ Aviso: Arquivo temporário não encontrado no caminho: {caminho_imagem_path}")
+
+        except Exception as e:
+            print(f"⚠️ Erro ao renderizar imagem de capa do disco: {e}")
 
     # === DESENHO DOS SLIDES (SEQUENCIAL PARA ECONOMIZAR RAM) ===
     print(f"ℹ️ Iniciando geração sequencial de {len(registros_com_foto)} registros para economizar memória.")

@@ -8,6 +8,10 @@ import os
 from sqlalchemy import text # Importação obrigatória para SQL puro no SQLAlchemy 2.0+
 from flask_login import login_required
 
+from app.utils.pdf_generator import gerar_pdf_task 
+from services.celery_config import celery_app 
+from werkzeug.datastructures import FileStorage 
+
 dashboard_bp = Blueprint('dashboard', __name__)
 dropbox_service = DropboxService()
 
@@ -203,54 +207,117 @@ def campanha_imagens():
 
     return jsonify(success=True, campanha=nome, imagens_por_espaco=resultado)
 
-# O trecho @dashboard_bp.route('/api/upload/imagens') estava comentado e foi mantido assim.
 
-@dashboard_bp.route('/gerar-pdf', methods=["POST"])
+# =======================================================
+# ✅ 1. ROTA DE DISPARO (POST /gerar-pdf-async)
+# Dispara a tarefa e retorna o Task ID Imediatamente.
+# =======================================================
+
+@dashboard_bp.route('/gerar-pdf-async', methods=['POST'])
 @login_required
-def gerar_pdf_campanha_post():
-    nome    = request.form.get("nome")
-    pi      = request.form.get("pi")
-    inicio  = request.form.get("inicio")
-    fim     = request.form.get("fim")
+def gerar_pdf_async():
+    # Nota: O frontend deve ser alterado para enviar PI, inicio, fim, etc., como JSON.
+    # A imagem (FileStorage) será tratada separadamente, conforme explicado abaixo.
 
-    imagem = request.files.get("imagemCampanha")  # ✅ imagem enviada via FormData
+    # 1. Obter dados: Usamos request.form (para FileStorage) e tratamos os demais dados.
+    nome = request.form.get("nome")
+    pi = request.form.get("pi")
+    inicio = request.form.get("inicio")
+    fim = request.form.get("fim")
+    imagem_file = request.files.get("imagemCampanha")
 
-    registros = gerar_registros_dinamicos_por_campanha(nome)
-    if not registros:
-        return {"status": "erro", "mensagem": "Campanha sem registros válidos."}, 404
+    if not nome:
+        return jsonify({"success": False, "message": "Nome da campanha é obrigatório."}), 400
 
-    caminho_pdf = gerar_pdf_por_nome(registros, nome, pi, inicio, fim, imagem_dinamica=imagem)  # ✅ envia imagem
-    if not caminho_pdf:
-        return {"status": "erro", "mensagem": "PDF não pôde ser gerado."}, 404
+    # 2. Tratamento do Arquivo (FileStorage):
+    # SALVAR o FileStorage ANTES de disparar a tarefa e passar o caminho.
+    caminho_imagem_temporario = None
+    if imagem_file and isinstance(imagem_file, FileStorage):
+        temp_dir = os.path.join(os.getcwd(), 'tmp_uploads')
+        os.makedirs(temp_dir, exist_ok=True)
+        caminho_imagem_temporario = os.path.join(temp_dir, imagem_file.filename)
+        imagem_file.save(caminho_imagem_temporario)
+        # Atenção: Você deve implementar uma rotina para limpar arquivos antigos em 'tmp_uploads'.
 
-    return send_file(
-        caminho_pdf,
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=os.path.basename(caminho_pdf)
+    # 3. Disparar a Tarefa Celery
+    task = gerar_pdf_task.delay(
+        nome_campanha=nome,
+        pi_numero=pi,
+        data_inicio=inicio,
+        data_fim=fim,
+        # Passamos o caminho do arquivo no disco
+        imagem_dinamica_path=caminho_imagem_temporario 
     )
 
-@dashboard_bp.route('/gerar-pdf-campanha/<nome>', methods=['GET'])
+    # 4. Retorna Task ID imediatamente
+    return jsonify({
+        'success': True,
+        'status': 'processing',
+        'task_id': task.id,
+        'message': 'Geração de PDF iniciada em segundo plano.'
+    }), 202
+
+# =======================================================
+# ✅ 2. ROTA DE STATUS (GET /pdf-status/<task_id>)
+# Verifica o progresso da tarefa Celery.
+# =======================================================
+
+@dashboard_bp.route('/pdf-status/<task_id>', methods=['GET'])
 @login_required
-def gerar_pdf_campanha_get(nome):
-    if 'usuario' not in session:
-        return redirect(url_for('auth.login'))
+def get_pdf_status(task_id):
+    task = celery_app.AsyncResult(task_id)
 
-    pi_numero = request.args.get('pi')
-    data_inicio = request.args.get('inicio')
-    data_fim = request.args.get('fim')
+    response = {
+        'status': task.status,
+    }
 
-    registros = gerar_registros_dinamicos_por_campanha(nome)
-    if not registros:
-        return "PDF não pôde ser gerado. Nenhum conteúdo válido encontrado.", 404
+    if task.state == 'SUCCESS':
+        # O resultado contém o caminho do PDF retornado pela tarefa
+        caminho_pdf = task.result 
+        
+        # O Celery guarda o caminho, mas vamos retornar apenas o nome do arquivo para o download final
+        response['result'] = os.path.basename(caminho_pdf)
+        response['file_path'] = caminho_pdf # Retorna o caminho completo para o próximo endpoint
+        
+        # Limpa o resultado da tarefa do Redis após o sucesso para economizar memória
+        task.forget() 
+        
+    elif task.state == 'FAILURE':
+        response['error'] = str(task.result)
+        # Limpa o resultado da tarefa do Redis
+        task.forget() 
 
-    caminho_pdf = gerar_pdf_por_nome(registros, nome, pi_numero, data_inicio, data_fim)
-    return send_file(
-        caminho_pdf,
-        mimetype='application/pdf',
-        as_attachment=False,
-        download_name=os.path.basename(caminho_pdf)
-    )
+    return jsonify(response)
+
+
+# =======================================================
+# ✅ 3. ROTA DE DOWNLOAD FINAL (GET /download-file)
+# Envia o arquivo gerado ao usuário.
+# =======================================================
+
+@dashboard_bp.route('/download-file', methods=['GET'])
+@login_required
+def download_pdf_final():
+    # O frontend envia o caminho completo do arquivo temporário
+    file_path = request.args.get('path')
+    
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({'message': 'Arquivo não encontrado ou expirado.'}), 404
+
+    try:
+        # Envia o arquivo
+        return send_file(
+            file_path,
+            as_attachment=True,
+            mimetype='application/pdf',
+            download_name=os.path.basename(file_path)
+        )
+    finally:
+        # Importante: Limpa o arquivo temporário após o envio
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Aviso: Não foi possível remover o arquivo temporário {file_path}: {e}")
 
 @dashboard_bp.route('/verificar-imagens-campanha/<nome>')
 @login_required

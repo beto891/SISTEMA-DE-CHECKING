@@ -13,6 +13,9 @@ load_dotenv()
 # NOVO: Importa a função de inicialização de DB para criar tabelas e admin
 from .utils.database import inicializar_banco
 
+# ✅ NOVO: Importa a função de inicialização do Celery
+from .services.celery_config import init_celery
+
 # --- INSTÂNCIAS GLOBAIS ---
 from .models import db, User
 login_manager = LoginManager()

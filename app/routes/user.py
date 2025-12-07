@@ -3,6 +3,9 @@ from app.utils.database import get_db_connection, criar_usuario, buscar_usuario
 from werkzeug.security import generate_password_hash
 from app.routes.auth import admin_required
 from sqlalchemy import text # <<-- NOVO: Importação obrigatória
+from werkzeug.security import generate_password_hash
+from flask import jsonify
+from app.models import db
 
 user_bp = Blueprint('user', __name__, url_prefix='/usuarios')
 
@@ -45,3 +48,52 @@ def excluir_usuario(user_id):
     conn.close()
     flash("Usuário excluído com sucesso!", "success")
     return redirect(url_for('user.listar_usuarios'))
+
+@user_bp.route('/api/user/<int:user_id>', methods=['PUT'])
+@admin_required
+def editar_usuario_api(user_id):
+    data = request.json
+    
+    username = data.get('username')
+    password = data.get('password')
+
+    try:
+        with db.engine.connect() as conn:
+            # 1. Busca o usuário existente
+            user_row = conn.execute(
+                text("SELECT id FROM users WHERE id = :id"), 
+                {"id": user_id}
+            ).fetchone()
+
+            if not user_row:
+                return jsonify({"success": False, "message": "Usuário não encontrado."}), 404
+            
+            # 2. Constrói a query de atualização
+            updates = []
+            params = {"id": user_id}
+            
+            # Atualiza o username
+            if username:
+                updates.append("username = :username")
+                params['username'] = username
+                
+            # Atualiza a senha (requer hashing, use a sua biblioteca de hashing)
+            if password:
+                # 🚨 IMPORTANTE: SUBSTITUA 'hash_password' PELA SUA FUNÇÃO REAL DE HASHING
+                from werkzeug.security import generate_password_hash 
+                updates.append("password = :password")
+                params['password'] = generate_password_hash(password) 
+
+            if not updates:
+                return jsonify({"success": False, "message": "Nenhum dado para atualizar."}), 400
+                
+            # 3. Executa a atualização
+            query = text(f"UPDATE users SET {', '.join(updates)} WHERE id = :id")
+            conn.execute(query, params)
+            conn.commit()
+
+            return jsonify({"success": True, "message": "Usuário atualizado com sucesso."}), 200
+
+    except Exception as e:
+        print(f"Erro ao editar usuário: {e}")
+        return jsonify({"success": False, "message": f"Erro interno: {str(e)}"}), 500

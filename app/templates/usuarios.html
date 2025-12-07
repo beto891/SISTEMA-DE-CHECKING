@@ -85,9 +85,23 @@
           <td>{{ u.id }}</td>
           <td>{{ u.username }}</td>
           <td>
+            <button 
+                    class="btn btn-warning btn-sm btn-editar-usuario" 
+                    data-toggle="modal" 
+                    data-target="#modalEdicaoUsuario"
+                    data-id="{{ u.id }}" 
+                    data-username="{{ u.username }}"
+                >
+                    Editar
+                </button>
+
+            {% if current_user.id != u.id %}
             <form method="POST" action="{{ url_for('user.excluir_usuario', user_id=u.id) }}"
                   onsubmit="return confirm('Excluir este usuário?')">
               <button class="btn btn-danger btn-sm">Excluir</button>
+              {% else %}
+               <span class="text-muted">Ação indisponível</span>
+               {% endif %}
             </form>
           </td>
         </tr>
@@ -96,6 +110,42 @@
   </table>
 </div>
 
+<div class="modal fade" id="modalEdicaoUsuario" tabindex="-1" aria-labelledby="modalEdicaoUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEdicaoUsuarioLabel">Editar Usuário: <span id="currentUsername"></span></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formEdicaoUsuario">
+                    <input type="hidden" id="editUserId" name="user_id">
+                    
+                    <div class="form-group">
+                        <label for="editUsername">Nome de Usuário</label>
+                        <input type="text" class="form-control" id="editUsername" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editPassword">Nova Senha (Deixe em branco para não alterar)</label>
+                        <input type="password" class="form-control" id="editPassword" name="password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editConfirmPassword">Confirme a Nova Senha</label>
+                        <input type="password" class="form-control" id="editConfirmPassword" name="confirm_password">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarEdicao">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ✅ Modal de logout -->
   <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -124,5 +174,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="{{ url_for('static', filename='js/relatorio.js') }}"></script>
 <script src="{{ url_for('static', filename='js/pesquisar_user.js') }}"></script>
+<script src="{{ url_for('static', filename='js/usuario.js') }}"></script>
 </body>
 </html>

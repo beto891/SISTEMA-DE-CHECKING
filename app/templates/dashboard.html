@@ -53,8 +53,7 @@
     <canvas id="graficoCampanhas" height="100"></canvas>
 </div>
 
-<div id="critical-alerts" class="position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 70px;">
-    </div>
+<div id="critical-alerts" class="position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 70px;"></div>
 
 <audio id="notificationSound" preload="auto" hidden>
     <source src="/static/audio/windows_pop_up.mp3" type="audio/mpeg">
@@ -101,8 +100,8 @@
                     </td>
                     
                     <td>
-                        <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}"><i class="fas fa-file-pdf"></i> Gerar PDF</button>
-                        <button class="btn btn-sm btn-dark btn-galeria" data-id="{{ r.id }}" data-nome="{{ r.campanha }}"><i class="fas fa-images"></i>Check-ins</button>
+                        <button class="btn btn-sm btn-primary btn-pdf" data-nome="{{ r.campanha }}"><i class="fas fa-file-pdf"></i> Gerar Relatório</button>
+                        <button class="btn btn-sm btn-dark btn-galeria" data-id="{{ r.id }}" data-nome="{{ r.campanha }}"><i class="fas fa-images"></i>Check-in</button>
                         <div class="dropdown d-inline">
                             <button class="btn btn-sm" type="button" data-toggle="dropdown" style="background: transparent; border: none;"><i class="fas fa-ellipsis-v text-dark"></i></button>
                             <div class="dropdown-menu dropdown-menu-right">
@@ -153,14 +152,14 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center">
-                    <button class="btn btn-sm btn-primary btn-block mr-2 btn-pdf" data-nome="{{ r.campanha }}">
-                        <i class="fas fa-file-pdf"></i> PDF
+                    <button class="btn btn-sm btn-primary mr-2 btn-pdf" data-nome="{{ r.campanha }}">
+                        <i class="fas fa-file-pdf"></i> Relatório
                     </button>
                     
-                    <button class="btn btn-sm btn-dark btn-block btn-galeria" 
+                    <button class="btn btn-sm btn-dark btn-galeria" 
                         data-id="{{ r.id }}" 
                         data-nome="{{ r.campanha }}">
-                        <i class="fas fa-images"></i> Check-ins
+                        <i class="fas fa-images"></i> Check-in
                     </button>
                 </div>
                 
@@ -373,7 +372,7 @@
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script>
-    // Criamos uma variável global 'registros' que o JS pode ler
+    
     // O filtro |tojson converte a lista do Python para formato JS
     window.registros = {{ registros|tojson|safe }};
 </script>
@@ -407,11 +406,11 @@
                         datasets: [{
                             label: '% de cobertura',
                             data: newValores,
-                            backgroundColor: newValores.map(v => v >= 100 ? '#28a745' : '#dc3545')
+                            backgroundColor: newValores.map(v => v >= 10 ? '#28a745' : '#dc3545')
                         }]
                     },
                     options: {
-                        scales: { y: { beginAtZero: true, max: 100 } },
+                        scales: { y: { beginAtZero: true, max: 10 } },
                         plugins: {
                             title: { display: true, text: newTitle, font: { size: 16 } },
                             tooltip: { callbacks: { label: ctx => ctx.raw + '% completo' } }

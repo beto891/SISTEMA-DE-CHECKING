@@ -68,60 +68,103 @@ function normalizarUrlDropbox(url) {
 async function gerarRelatorioPDF() {
     const form = document.getElementById('formPdfGeracao');
     const btn = document.getElementById('btnGerarPdf'); 
-
-    // 1. Validação
+    
     if (!form.checkValidity()) {
         alert('⚠️ Preencha todos os campos obrigatórios.');
         form.reportValidity();
         return;
     }
 
-    // 2. Feedback Visual
     const conteudoOriginal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
 
+    // 1. Coleta os dados do formulário
+    const formData = new FormData(form);
+    const dataToSend = {};
+    formData.forEach((value, key) => {
+        dataToSend[key] = value;
+    });
+
+    // A imagem (FileStorage) será enviada separadamente (ver seção HTML abaixo).
+    const imagemFile = formData.get('imagemCampanha');
+
     try {
         $('#modalPdfInfo').modal('hide');
-        showBootstrapAlert('Iniciando geração do PDF...', 'info');
+        showBootstrapAlert('Iniciando geração do PDF em segundo plano...', 'info', 0); // Alerta persistente
 
-        const formData = new FormData(form);
-
-        // 4. Envio
-        const response = await fetch('/gerar-pdf', {
+        // 2. Envia os dados via FormData (necessário para a imagem)
+        const response = await fetch('/gerar-pdf-async', { // Nova ROTA!
             method: 'POST',
-            body: formData
+            body: formData // Continua usando FormData para enviar campos e o arquivo
         });
 
-        if (!response.ok) {
-            const erro = await response.json(); 
-            throw new Error(erro.mensagem || 'Erro desconhecido no servidor.');
+        const data = await response.json();
+
+        if (response.status === 202 && data.task_id) {
+            // 3. Inicia o monitoramento da tarefa
+            startPdfPolling(data.task_id);
+            
+        } else {
+            throw new Error(data.message || 'Falha ao iniciar a tarefa Celery.');
         }
-
-        // 5. Download (Sucesso)
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        const nomeArquivo = formData.get('nome') || 'Campanha'; 
-        a.download = `Relatorio_${nomeArquivo}.pdf`;
-        
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-
-        showBootstrapAlert('✅ PDF gerado com sucesso!', 'success');
 
     } catch (error) {
         console.error(error);
-        showBootstrapAlert(`Erro: ${error.message}`, 'danger');
+        showBootstrapAlert(`Erro ao disparar tarefa: ${error.message}`, 'danger');
         $('#modalPdfInfo').modal('show');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = conteudoOriginal;
+        // Não reabilite o botão aqui. O polling fará isso.
     }
+}
+
+// Função para monitorar o status da tarefa Celery
+function startPdfPolling(taskId) {
+    // Reabilita o botão e remove o spinner se existir algum
+    const resetUi = () => {
+        const btn = $('#btnGerarPdf');
+        btn.disabled = false;
+        // Se precisar restaurar o HTML original, guarde-o na função de disparo
+    };
+
+    const pollingInterval = setInterval(async () => {
+        try {
+            // Nova ROTA DE STATUS!
+            const response = await fetch(`/pdf-status/${taskId}`); 
+            const data = await response.json();
+
+            if (data.status === 'SUCCESS') {
+                clearInterval(pollingInterval); // Para de checar
+                resetUi(); 
+                
+                // Limpa o alerta "processando"
+                $('#notification-container .alert').remove(); 
+
+                const filePath = data.file_path; 
+                
+                // Nova ROTA DE DOWNLOAD FINAL!
+                // O download será acionado via link final que também limpa o temp file.
+                window.location.href = `/download-file?path=${encodeURIComponent(filePath)}`;
+                
+                showBootstrapAlert('✅ PDF gerado e download iniciado!', 'success');
+            } else if (data.status === 'FAILURE' || data.status === 'REVOKED') {
+                clearInterval(pollingInterval);
+                resetUi();
+                $('#notification-container .alert').remove();
+                
+                showBootstrapAlert(`❌ Falha na geração do PDF: ${data.error || 'Erro desconhecido'}`, 'danger');
+            } else {
+                // Tarefa ainda PENDING ou STARTED
+                console.log(`Status do PDF: ${data.status}`);
+            }
+        } catch (error) {
+            clearInterval(pollingInterval);
+            resetUi();
+            $('#notification-container .alert').remove();
+            console.error('Erro no polling:', error);
+            showBootstrapAlert('Erro crítico ao monitorar a geração do PDF.', 'danger');
+        }
+    }, 4000); // Verifica a cada 4 segundos
 }
 
 // --- FUNÇÕES DE AÇÃO DE MODAIS (PDF, GALERIA, EDIÇÃO, EXCLUSÃO) ---
