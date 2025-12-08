@@ -16,7 +16,7 @@ from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 from sqlalchemy import text 
 
-from services.celery_config import celery_app
+from app.services.celery_config import celery_app
 
 # ✅ Definição Global de Cor
 magenta = Color(0.95, 0.2, 0.5)
