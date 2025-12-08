@@ -26,5 +26,6 @@ class ContextTask(celery_app.Task):
 
 # versão simplificada:
 def init_celery(app):
+    celery_app.app = app
     celery_app.Task = ContextTask
     celery_app.conf.update(app.config)

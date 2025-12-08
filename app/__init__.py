@@ -59,6 +59,10 @@ def create_app():
     socketio.init_app(app)
     login_manager.init_app(app)
 
+
+    from .services.celery_config import init_celery
+    init_celery(app)
+    
     # --- REGISTRO DE BLUEPRINTS, EVENTOS E INICIALIZAÇÃO DO DB ---
     with app.app_context():
         # CHAMADA CRÍTICA ADICIONADA: Inicializa as tabelas no PostgreSQL/SQLite e cria o admin
