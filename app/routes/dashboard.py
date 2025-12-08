@@ -9,7 +9,7 @@ from sqlalchemy import text # Importação obrigatória para SQL puro no SQLAlch
 from flask_login import login_required
 
 from app.utils.pdf_generator import gerar_pdf_task 
-from services.celery_config import celery_app 
+from app.services.celery_config import celery_app 
 from werkzeug.datastructures import FileStorage 
 
 dashboard_bp = Blueprint('dashboard', __name__)
