@@ -20,7 +20,7 @@ celery_app.conf.update(
 
 class ContextTask(celery_app.Task):
     def __call__(self, *args, **kwargs):
-        # AQUI USAMOS A INSTÂNCIA DO FLASK QUE FOI IMPORTADA GLOBALMENTE
+        # O self.app é a instância do Flask que o Worker precisa.
         with self.app.app_context():
             return self.run(*args, **kwargs)
 
