@@ -121,7 +121,7 @@ def gerar_registros_dinamicos_por_campanha(nome_campanha: str) -> list[dict]:
 # ✅ FUNÇÃO PRINCIPAL TRANSFORMADA EM TAREFA CELERY
 # =======================================================
 @celery_app.task(bind=True, name='tasks.gerar_pdf_relatorio')
-def gerar_pdf_task(self, nome_campanha, pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica=None):
+def gerar_pdf_task(self, nome_campanha, pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica_path=None):
     
     # 1. Obtenção de Registros (Chamada dentro da Task!)
     registros = gerar_registros_dinamicos_por_campanha(nome_campanha)
@@ -133,7 +133,7 @@ def gerar_pdf_task(self, nome_campanha, pi_numero=None, data_inicio=None, data_f
         pi_numero=pi_numero,
         data_inicio=data_inicio,
         data_fim=data_fim,
-        imagem_dinamica=imagem_dinamica # Note: Passar FileStorage aqui pode ser complexo, passe o caminho se for o caso.
+        imagem_dinamica_path=imagem_dinamica_path
     )
 
     if not caminho_pdf:
@@ -144,7 +144,7 @@ def gerar_pdf_task(self, nome_campanha, pi_numero=None, data_inicio=None, data_f
     return caminho_pdf
 
 # --- FUNÇÃO PRINCIPAL OTIMIZADA (SEM THREAD POOL / BAIXO CONSUMO DE RAM) ---
-def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica=None):
+def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data_inicio=None, data_fim=None, imagem_dinamica_path=None):
     
     registros_com_foto = [r for r in registros if r.get("imagens")]
     if not registros_com_foto:
@@ -213,8 +213,8 @@ def gerar_pdf_por_nome(registros, nome_campanha="campanha", pi_numero=None, data
     c.drawString(8.8 * cm, 1.5 * cm, "bdrops.tv - contato@bdrops.tv - (11) 3078-0879")
     c.showPage()
 
-    if imagem_dinamica:
-        caminho_imagem_path = imagem_dinamica # Assumindo que o nome do parâmetro é 'imagem_dinamica'
+    if imagem_dinamica_path:
+        caminho_imagem_path = imagem_dinamica_path # Assumindo que o nome do parâmetro é 'imagem_dinamica'
 
         try:
             # Verifica se o caminho existe e não é nulo
