@@ -14,7 +14,7 @@ load_dotenv()
 from .utils.database import inicializar_banco
 
 # ✅ NOVO: Importa a função de inicialização do Celery
-from .services.celery_config import init_celery
+from app.services.celery_config import init_celery
 
 # --- INSTÂNCIAS GLOBAIS ---
 from .models import db, User
@@ -60,9 +60,10 @@ def create_app():
     login_manager.init_app(app)
 
 
-    from .services.celery_config import init_celery
+  
+    # ✅ INICIALIZAÇÃO DO CELERY COM A APLICAÇÃO FLASK
     init_celery(app)
-    
+
     # --- REGISTRO DE BLUEPRINTS, EVENTOS E INICIALIZAÇÃO DO DB ---
     with app.app_context():
         # CHAMADA CRÍTICA ADICIONADA: Inicializa as tabelas no PostgreSQL/SQLite e cria o admin
