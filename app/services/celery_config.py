@@ -1,6 +1,7 @@
 import os
 import re
 from celery import Celery
+from app import create_app
 
 # 1. Limpeza rigorosa da URL (remove espaços ou quebras de linha acidentais)
 raw_url = os.environ.get('REDIS_URL', '').strip()
@@ -51,16 +52,21 @@ celery_app.conf.update(
 )
 
 # 
-
 class ContextTask(celery_app.Task):
+    _app = None
+
     def __call__(self, *args, **kwargs):
-        # O self.app é injetado pelo init_celery abaixo
-        with self.app.app_context():
+        # Se o app não foi injetado, nós criamos um aqui (essencial para o Worker)
+        if self._app is None:
+            self._app = create_app()
+        
+        with self._app.app_context():
             return self.run(*args, **kwargs)
 
+# Vincula a classe ao app
+celery_app.Task = ContextTask
+
 def init_celery(app):
-    """Vincula a instância do Flask ao Celery sem importação circular"""
+    """Usado pelo Web Service para injetar o app existente"""
     celery_app.app = app
-    celery_app.Task = ContextTask
-    # Mescla as configurações do Flask (como DB_URL) no Celery
     celery_app.conf.update(app.config)
