@@ -38,12 +38,12 @@ class ContextTask(celery_app.Task):
     _flask_app = None
 
     def __call__(self, *args, **kwargs):
-        # Importação Tardia: O app só é importado quando a tarefa rodar
-        if self._app is None:
-            from app import create_app 
-            self.flask_app = create_app()
+        # Importação tardia para evitar ciclos
+        if ContextTask._flask_app is None:
+            from app import create_app
+            ContextTask._flask_app = create_app()
         
-        with self._flask_app.app_context():
+        with ContextTask._flask_app.app_context():
             return self.run(*args, **kwargs)
 
 celery_app.Task = ContextTask
