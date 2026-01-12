@@ -1,19 +1,40 @@
-from celery import Celery
 import os
+import re
+from celery import Celery
 
-# 1. Obtém a URL e garante que use 'rediss://' para SSL (essencial para Upstash)
-REDIS_URL = os.environ.get('REDIS_URL', 
-                           'rediss://default:ARepAAImcDI0MjJkODYwYTE2ZDM0MTM3YTIwYjFiZmM4Yzg5YTMyNnAyNjA1Nw@welcome-sheepdog-6057.upstash.io:6379')
+# 1. Limpeza rigorosa da URL (remove espaços ou quebras de linha acidentais)
+raw_url = os.environ.get('REDIS_URL', '').strip()
 
-# 2. Configuração de SSL para evitar erros de validação no Render/Upstash
+# Fallback para caso a variável esteja vazia ou mal formatada
+if not raw_url.startswith('rediss://'):
+    raw_url = 'rediss://default:ARepAAImcDI0MjJkODYwYTE2ZDM0MTM3YTIwYjFiZmM4Yzg5YTMyNnAyNjA1Nw@welcome-sheepdog-6057.upstash.io:6379'
+
+REDIS_URL = raw_url
+
 ssl_options = {
-    'ssl_cert_reqs': 'none'  # Permite conectar sem validar a cadeia de certificados (padrão p/ Upstash)
+    'ssl_cert_reqs': 'none'
 }
 
 celery_app = Celery(
     'checking-redis',
     broker=REDIS_URL,
     backend=REDIS_URL
+)
+
+celery_app.conf.update(
+    task_track_started=True,
+    broker_connection_retry_on_startup=True,
+    broker_use_ssl=ssl_options,
+    redis_backend_use_ssl=ssl_options,
+    #CONFIGURAÇÃO ANTIFALHA DE DNS:
+    broker_transport_options={
+        'max_retries': 10,
+        'interval_start': 0.5,
+        'interval_step': 1,
+        'interval_max': 5,
+        'socket_timeout': 30,
+        'socket_connect_timeout': 30,
+    }
 )
 
 # 3. Configurações adicionais robustas
