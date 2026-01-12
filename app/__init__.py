@@ -62,6 +62,7 @@ def create_app():
 
   
     # ✅ INICIALIZAÇÃO DO CELERY COM A APLICAÇÃO FLASK
+    from app.services.celery_config import init_celery
     init_celery(app)
 
     # --- REGISTRO DE BLUEPRINTS, EVENTOS E INICIALIZAÇÃO DO DB ---
