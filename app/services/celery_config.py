@@ -18,7 +18,8 @@ ssl_options = {
 celery_app = Celery(
     'checking-redis',
     broker=REDIS_URL,
-    backend=REDIS_URL
+    backend=REDIS_URL,
+    include=['app.utils.pdf_generator']
 )
 
 celery_app.conf.update(
