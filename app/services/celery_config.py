@@ -38,14 +38,24 @@ class ContextTask(celery_app.Task):
     _flask_app = None
 
     def __call__(self, *args, **kwargs):
-        # Importação tardia para evitar ciclos
+        # Usamos a referência da CLASSE (ContextTask) para garantir o Singleton
         if ContextTask._flask_app is None:
             from app import create_app
+            print("🚀 Worker criando instância do Flask...")
             ContextTask._flask_app = create_app()
+
+        # Verificação de segurança: Se create_app() não retornou nada, gera erro explicativo
+        if ContextTask._flask_app is None:
+            raise RuntimeError(
+                "Falha crítica: a função create_app() retornou None. "
+                "Verifique se existe 'return app' no final do seu app/__init__.py"
+            )
         
+        # Agora o contexto funcionará pois garantimos que _flask_app não é None
         with ContextTask._flask_app.app_context():
             return self.run(*args, **kwargs)
 
+# Aplica a classe ao Celery
 celery_app.Task = ContextTask
 
 def init_celery(app):
