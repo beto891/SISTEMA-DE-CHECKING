@@ -35,19 +35,28 @@ celery_app.conf.update(
 )
 
 class ContextTask(celery_app.Task):
-    _flask_app = None
+    _flask_app = None  # Variável de classe para persistência
 
     def __call__(self, *args, **kwargs):
+        # Usamos a referência da CLASSE (ContextTask) em vez de 'self'
         if ContextTask._flask_app is None:
-            # ✅ CORREÇÃO AQUI: Importe o create_app aqui dentro!
-            from app import create_app 
-            ContextTask._flask_app = create_app()
-        
+            from app import create_app
+            print("🚀 Worker: Iniciando criação da instância Flask...")
+            temp_app = create_app()
+            
+            if temp_app is None:
+                raise RuntimeError("ERRO CRÍTICO: create_app() retornou None!")
+            
+            ContextTask._flask_app = temp_app
+
+        # Agora garantimos que o contexto é aberto no objeto Flask real
         with ContextTask._flask_app.app_context():
             return self.run(*args, **kwargs)
 
+# Aplica a classe ao app do Celery
 celery_app.Task = ContextTask
 
 def init_celery(app):
+    """Vincula o app do Flask ao Celery"""
     celery_app.app = app
     celery_app.conf.update(app.config)
