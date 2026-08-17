@@ -39,24 +39,34 @@ def create_db():
 
 from werkzeug.security import generate_password_hash
 from app.models import db, User
+import os
 
 @app.cli.command("create-admin")
 def create_admin():
-    """Cria o utilizador administrador padrão."""
-    # Verifique se o utilizador já existe
-    if User.query.filter_by(username='admin').first():
-        print("Utilizador 'admin' já existe.")
+    """Cria o utilizador administrador a partir das variáveis do ambiente."""
+    admin_username = os.getenv('ADMIN_USERNAME', 'admin')
+    admin_password = os.getenv('ADMIN_PASSWORD')
+
+    if not admin_password:
+        print("⚠️ ADMIN_PASSWORD não configurado. Defina a variável de ambiente antes de criar o admin.")
         return
 
-    # Cria o novo utilizador admin
+    existing_user = User.query.filter_by(username=admin_username).first()
+    if existing_user:
+        existing_user.senha = generate_password_hash(admin_password, method='pbkdf2:sha256')
+        existing_user.is_admin = 1
+        db.session.commit()
+        print(f"✅ Utilizador '{admin_username}' atualizado com a senha do ambiente.")
+        return
+
     admin_user = User(
-        username='admin',
-        senha=generate_password_hash('beto891', method='pbkdf2:sha256'),
+        username=admin_username,
+        senha=generate_password_hash(admin_password, method='pbkdf2:sha256'),
         is_admin=1
     )
     db.session.add(admin_user)
     db.session.commit()
-    print("✅ Utilizador 'admin' criado com sucesso.")
+    print(f"✅ Utilizador '{admin_username}' criado com sucesso.")
 
 # --- Execução ---
 if __name__ == "__main__":

@@ -12,9 +12,6 @@ from flask import current_app
 from app.utils.database import get_db_connection
 from app.services.dropbox_service import DropboxService
 
-# 🔐 Instancia única do serviço Dropbox
-dropbox_service = DropboxService()
-
 # 🔗 Monta URL pública e direta do Dropbox
 def montar_url_dropbox(imagem_path):
     if not imagem_path:
@@ -23,7 +20,8 @@ def montar_url_dropbox(imagem_path):
         if imagem_path.startswith("http://") or imagem_path.startswith("https://"):
             return imagem_path
 
-        url = dropbox_service.create_shared_link(imagem_path)
+        service = DropboxService()
+        url = None if service.dbx is None else service.create_shared_link(imagem_path)
         if url and "dropbox.com" in url:
             url = url.replace("www.dropbox.com", "dl.dropboxusercontent.com").replace("?dl=0", "")
         return url

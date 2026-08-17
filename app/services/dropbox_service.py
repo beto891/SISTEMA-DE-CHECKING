@@ -30,38 +30,40 @@ def renovar_access_token(refresh_token, app_key, app_secret):
 
 class DropboxService:
     def __init__(self, refresh_token=None, app_key=None, app_secret=None):
-        refresh_token = refresh_token or os.getenv("DROPBOX_REFRESH_TOKEN")
-        app_key = app_key or os.getenv("DROPBOX_APP_KEY")
-        app_secret = app_secret or os.getenv("DROPBOX_APP_SECRET")
+        self.refresh_token = refresh_token or os.getenv("DROPBOX_REFRESH_TOKEN")
+        self.app_key = app_key or os.getenv("DROPBOX_APP_KEY")
+        self.app_secret = app_secret or os.getenv("DROPBOX_APP_SECRET")
+        self.dbx = None
 
-        if not all([refresh_token, app_key, app_secret]):
-            raise RuntimeError("Credenciais do Dropbox ausentes.")
+        if not all([self.refresh_token, self.app_key, self.app_secret]):
+            logger.warning("Credenciais do Dropbox ausentes. O serviço ficará indisponível até que o ambiente seja configurado.")
+            return
 
-        access_token = renovar_access_token(refresh_token, app_key, app_secret)
+        access_token = renovar_access_token(self.refresh_token, self.app_key, self.app_secret)
         self.dbx = dropbox.Dropbox(access_token)
 
         try:
-            # ✅ AJUSTE: Força a validação da autenticação ao inicializar a classe
             self.dbx.users_get_current_account()
             logger.info("🔐 Conexão com Dropbox estabelecida com sucesso.")
         except dropbox.exceptions.AuthError as e:
             logger.error(f"❌ Erro de autenticação: {e}")
+            self.dbx = None
             raise RuntimeError("Erro de autenticação com Dropbox")
         except Exception as e:
             logger.exception("❌ Falha ao validar conexão com Dropbox.")
+            self.dbx = None
             raise RuntimeError("Erro de autenticação com Dropbox")
 
+    def _require_dbx(self):
+        if self.dbx is None:
+            raise RuntimeError("DropboxService indisponível: credenciais ausentes ou falha na autenticação.")
+        return self.dbx
+
     def upload_file(self, file_content, dropbox_path):
-        """Faz upload de um arquivo para o Dropbox a partir de um stream.
-        Recebe o conteúdo do arquivo já lido (em bytes)."""
+        """Faz upload de um arquivo para o Dropbox."""
+        dbx = self._require_dbx()
         try:
-            # ✅ CORREÇÃO: Passa o conteúdo do arquivo (em bytes) diretamente
-            # O método .read() já foi chamado na rota que enviou o arquivo
-            self.dbx.files_upload(
-                file_content,
-                dropbox_path,
-                mode=dropbox.files.WriteMode.overwrite
-            )
+            dbx.files_upload(file_content, dropbox_path, mode=dropbox.files.WriteMode.overwrite)
             logger.info(f"✅ Upload concluído: {dropbox_path}")
             return True, self.create_shared_link(dropbox_path)
         except Exception as e:
@@ -70,13 +72,14 @@ class DropboxService:
 
     def create_shared_link(self, dropbox_path):
         """Gera um link público direto para o arquivo no Dropbox."""
+        dbx = self._require_dbx()
         try:
-            links = self.dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True).links
+            links = dbx.sharing_list_shared_links(path=dropbox_path, direct_only=True).links
             if links:
                 url = links[0].url
             else:
                 settings = SharedLinkSettings(requested_visibility=RequestedVisibility.public)
-                link_metadata = self.dbx.sharing_create_shared_link_with_settings(dropbox_path, settings)
+                link_metadata = dbx.sharing_create_shared_link_with_settings(dropbox_path, settings)
                 url = link_metadata.url
 
             if "dropbox.com" in url:
@@ -95,8 +98,9 @@ class DropboxService:
 
     def download_file(self, dropbox_path, local_path):
         """Faz download de um arquivo do Dropbox para o disco local."""
+        dbx = self._require_dbx()
         try:
-            metadata, res = self.dbx.files_download(dropbox_path)
+            metadata, res = dbx.files_download(dropbox_path)
             with open(local_path, 'wb') as f:
                 f.write(res.content)
             logger.info(f"📥 Download concluído: {dropbox_path} → {local_path}")
@@ -106,8 +110,9 @@ class DropboxService:
 
     def delete_file(self, dropbox_path):
         """Exclui um arquivo do Dropbox."""
+        dbx = self._require_dbx()
         try:
-            self.dbx.files_delete_v2(dropbox_path)
+            dbx.files_delete_v2(dropbox_path)
             logger.info(f"🗑️ Arquivo excluído: {dropbox_path}")
         except dropbox.exceptions.ApiError as e:
             if "path/not_found" in str(e):
@@ -121,8 +126,9 @@ class DropboxService:
 
     def move_file(self, origem, destino):
         """Move um arquivo dentro do Dropbox."""
+        dbx = self._require_dbx()
         try:
-            self.dbx.files_move_v2(from_path=origem, to_path=destino, autorename=True)
+            dbx.files_move_v2(from_path=origem, to_path=destino, autorename=True)
             logger.info(f"📂 Arquivo movido: {origem} → {destino}")
         except dropbox.exceptions.ApiError as e:
              if "path/not_found" in str(e):
@@ -136,8 +142,9 @@ class DropboxService:
 
     def file_exists(self, dropbox_path):
         """Verifica se um arquivo existe no Dropbox."""
+        dbx = self._require_dbx()
         try:
-            self.dbx.files_get_metadata(dropbox_path)
+            dbx.files_get_metadata(dropbox_path)
             return True
         except dropbox.exceptions.ApiError as e:
             if isinstance(e.error, dropbox.files.GetMetadataError) and e.error.is_path() and e.error.get_path().is_not_found():

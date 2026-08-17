@@ -1,8 +1,7 @@
-print("--- CARREGANDO A VERSÃO FINAL E CORRETA DO __init__.py ---") # MENSAGEM DE TESTE
-
 import os
 from flask import Flask
 from flask_cors import CORS
+from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_login import LoginManager
 from datetime import timedelta
@@ -14,6 +13,7 @@ load_dotenv()
 from .models import db, User
 login_manager = LoginManager()
 socketio = SocketIO(cors_allowed_origins="*")
+migrate = Migrate()
 
 # Configura o LoginManager
 login_manager.login_view = 'auth.login'
@@ -29,33 +29,54 @@ def load_user(user_id):
 def create_app():
     app = Flask(__name__)
 
+    environment = os.getenv('FLASK_ENV', 'development').lower()
+    is_production = environment == 'production' or os.getenv('APP_ENV', '').lower() == 'production'
+
     # --- CONFIGURAÇÕES ---
-    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "uma-chave-secreta-forte")
-    
+    secret_key = os.getenv("SECRET_KEY")
+    if not secret_key and is_production:
+        raise RuntimeError("SECRET_KEY deve ser configurada em produção.")
+    if not secret_key:
+        app.logger.warning("SECRET_KEY não definida; usando valor local apenas para desenvolvimento. Configure em produção.")
+    app.config['SECRET_KEY'] = secret_key or 'dev-secret-change-me'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+    admin_password = os.getenv('ADMIN_PASSWORD')
+    if not admin_password and is_production:
+        raise RuntimeError("ADMIN_PASSWORD deve ser configurada em produção.")
+
     # <<< LÓGICA DE CONEXÃO AJUSTADA PARA POSTGRESQL E SQLITE >>>
     DATABASE_URL = os.getenv('DATABASE_URL')
+    if not DATABASE_URL and is_production:
+        raise RuntimeError("DATABASE_URL deve ser configurada em produção.")
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         # Pequena correção necessária para compatibilidade com Heroku/Render e SQLAlchemy
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    if DATABASE_URL and DATABASE_URL.startswith("sqlite:///"):
+        sqlite_path = DATABASE_URL.replace("sqlite:///", "", 1)
+        if not os.path.isabs(sqlite_path):
+            sqlite_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', sqlite_path))
+        DATABASE_URL = f"sqlite:///{sqlite_path}"
 
-    # Se a variável de ambiente DATABASE_URL existir (na cloud), usa-a.
-    # Senão (localmente), usa o ficheiro SQLite.
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or f"sqlite:///{os.path.abspath('database.db')}"
-    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['DROPBOX_REFRESH_TOKEN'] = os.getenv("DROPBOX_REFRESH_TOKEN")
     app.config['DROPBOX_APP_KEY'] = os.getenv("DROPBOX_APP_KEY")
     app.config['DROPBOX_APP_SECRET'] = os.getenv("DROPBOX_APP_SECRET")
 
-    # --- INICIALIZAÇÃO DAS EXTENSÕES ---
     CORS(app)
     db.init_app(app)
+    migrate.init_app(app, db)
     socketio.init_app(app)
     login_manager.init_app(app)
 
-    # --- REGISTRO DE BLUEPRINTS E EVENTOS ---
     with app.app_context():
-        # Importa as blueprints
+        from app.utils.database import inicializar_banco
+        inicializar_banco()
+
         from .routes.auth import auth
         from .routes.task import task_bp
         from .routes.campaign import campaign_bp
@@ -64,11 +85,8 @@ def create_app():
         from .routes.upload import upload_bp
         from .routes.delete_galeria import delete_galeria_bp
         from .routes.admin_bp import admin_bp
-        
-        # Importa o arquivo de eventos do socketio para que os handlers sejam registrados
-        from . import socketio_events 
+        from . import socketio_events
 
-        # Registro das Blueprints
         app.register_blueprint(auth)
         app.register_blueprint(task_bp)
         app.register_blueprint(campaign_bp)

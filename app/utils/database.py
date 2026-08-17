@@ -2,22 +2,44 @@ import sqlite3
 import os
 from werkzeug.security import generate_password_hash
 
-# Caminho absoluto para o banco de dados
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-db_path = os.path.join(BASE_DIR, 'database.db')
+
+
+def _resolve_database_path():
+    """Respeita DATABASE_URL em ambientes de teste e produção."""
+    database_url = os.getenv('DATABASE_URL', '').strip()
+    if database_url.startswith('sqlite:///'):
+        sqlite_path = database_url.replace('sqlite:///', '', 1)
+        if not os.path.isabs(sqlite_path):
+            sqlite_path = os.path.abspath(os.path.join(BASE_DIR, sqlite_path))
+        return sqlite_path
+    return os.path.join(BASE_DIR, 'database.db')
+
+
+db_path = _resolve_database_path()
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+
 
 def get_db_connection():
     """Retorna uma conexão com o banco de dados SQLite."""
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row  # Permite acessar colunas por nome
+    conn = sqlite3.connect(_resolve_database_path())
+    conn.row_factory = sqlite3.Row
     return conn
 
+
+def _ensure_column(conn, table_name, column_name, column_sql):
+    cursor = conn.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cursor.fetchall()]
+    if column_name not in columns:
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_sql}")
+
+
 def inicializar_banco():
-    """Cria as tabelas 'tarefas', 'campanhas', 'campanhas_imagens' e 'usuarios' se ainda não existirem."""
+    """Cria e ajusta as tabelas essenciais para o sistema em modo profissional."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Tabela de tarefas
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tarefas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,7 +54,6 @@ def inicializar_banco():
     )
     """)
 
-    # Tabela de campanhas atualizada
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS campanhas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,21 +61,22 @@ def inicializar_banco():
         nome TEXT,
         latitude REAL,
         longitude REAL,
-        data_criacao TEXT
+        data_criacao TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    # Tabela de imagens vinculadas a campanhas via campanha_id
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS campanhas_imagens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         campanha_id INTEGER NOT NULL,
         imagem_path TEXT NOT NULL,
-        FOREIGN KEY (campanha_id) REFERENCES campanhas(id)
+        apagada INTEGER DEFAULT 0,
+        fileid TEXT,
+        folderid TEXT,
+        FOREIGN KEY (campanha_id) REFERENCES campanhas(id) ON DELETE CASCADE
     )
     """)
 
-    # Tabela de usuários
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,40 +85,60 @@ def inicializar_banco():
         is_admin INTEGER DEFAULT 0
     )
     """)
-    #Imagens excluidas
+
     cursor.execute("""
-    CREATE TABLE imagens_excluidas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cod TEXT NOT NULL,
-    campanha TEXT NOT NULL,
-    imagem_path TEXT NOT NULL,
-    excluido_por TEXT NOT NULL,
-    data_exclusao TEXT NOT NULL
-    
+    CREATE TABLE IF NOT EXISTS localizacoes_usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        timestamp TEXT
     )
-    """);
-    
+    """)
 
-    # Adiciona coluna is_admin se não existir (para bancos antigos)
-    cursor.execute("PRAGMA table_info(usuarios)")
-    colunas = [col[1] for col in cursor.fetchall()]
-    if 'is_admin' not in colunas:
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN is_admin INTEGER DEFAULT 0")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS imagens_excluidas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cod TEXT NOT NULL,
+        campanha TEXT NOT NULL,
+        imagem_path TEXT NOT NULL,
+        excluido_por TEXT NOT NULL,
+        data_exclusao TEXT NOT NULL
+    )
+    """)
 
-    # Cria usuário admin padrão se não existir
-    cursor.execute("SELECT * FROM usuarios WHERE username = ?", ("admin",))
-    if not cursor.fetchone():
-        cursor.execute(
-            "INSERT INTO usuarios (username, senha, is_admin) VALUES (?, ?, ?)",
-            ("admin", generate_password_hash("beto891"), 1)
-        )
-        print("👤 Usuário admin criado com senha padrão.")
+    _ensure_column(conn, 'usuarios', 'is_admin', 'INTEGER DEFAULT 0')
+    _ensure_column(conn, 'campanhas_imagens', 'apagada', 'INTEGER DEFAULT 0')
+    _ensure_column(conn, 'campanhas_imagens', 'fileid', 'TEXT')
+    _ensure_column(conn, 'campanhas_imagens', 'folderid', 'TEXT')
+    _ensure_column(conn, 'campanhas', 'data_criacao', 'TEXT DEFAULT CURRENT_TIMESTAMP')
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_campanhas_nome ON campanhas(nome)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_campanhas_imagens_campanha ON campanhas_imagens(campanha_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_campanhas_imagens_apagada ON campanhas_imagens(apagada)")
+
+    if ADMIN_PASSWORD:
+        cursor.execute("SELECT * FROM usuarios WHERE username = ?", (ADMIN_USERNAME,))
+        admin_row = cursor.fetchone()
+        if admin_row is None:
+            cursor.execute(
+                "INSERT INTO usuarios (username, senha, is_admin) VALUES (?, ?, ?)",
+                (ADMIN_USERNAME, generate_password_hash(ADMIN_PASSWORD), 1)
+            )
+            print(f"👤 Usuário admin '{ADMIN_USERNAME}' criado com senha proveniente da variável de ambiente ADMIN_PASSWORD.")
+        else:
+            cursor.execute(
+                "UPDATE usuarios SET senha = ?, is_admin = 1 WHERE username = ?",
+                (generate_password_hash(ADMIN_PASSWORD), ADMIN_USERNAME)
+            )
+            print(f"👤 Usuário admin '{ADMIN_USERNAME}' atualizado com a senha configurada na variável de ambiente ADMIN_PASSWORD.")
+    else:
+        print("⚠️ Nenhum usuário admin foi criado porque ADMIN_PASSWORD não está definido no ambiente.")
 
     conn.commit()
     conn.close()
     print("✅ Banco de dados e tabelas criadas com sucesso!")
 
-# Funções utilitárias
 
 def buscar_usuario(username):
     """Busca um usuário pelo nome."""
@@ -104,6 +146,7 @@ def buscar_usuario(username):
     user = conn.execute("SELECT * FROM usuarios WHERE username = ?", (username,)).fetchone()
     conn.close()
     return user
+
 
 def criar_usuario(username, senha, is_admin=0):
     """Cria um novo usuário com senha criptografada."""

@@ -1,1 +1,1 @@
-web: gunicorn --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 'run:create_app()'
+web: gunicorn --config gunicorn.conf.py main:app

@@ -24,20 +24,57 @@ upload_bp = Blueprint('upload', __name__, url_prefix='/api/upload')
 # --- Constantes ---
 EXTENSOES_VALIDAS = {'.png', '.jpg', '.jpeg', '.webp'}
 PASTA_LIXEIRA = "/LIXEIRA"
+MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
 
 # --- Funções Auxiliares ---
 
 def get_dropbox_service():
     """Inicializa e retorna uma instância do serviço do Dropbox."""
     try:
-        return DropboxService(
-            refresh_token=current_app.config['DROPBOX_REFRESH_TOKEN'],
-            app_key=current_app.config['DROPBOX_APP_KEY'],
-            app_secret=current_app.config['DROPBOX_APP_SECRET']
-        )
-    except KeyError as e:
-        current_app.logger.error(f"❌ Configuração do Dropbox ausente: {e}")
-        raise RuntimeError(f"Credencial do Dropbox não encontrada: {e}")
+        refresh_token = current_app.config.get('DROPBOX_REFRESH_TOKEN')
+        app_key = current_app.config.get('DROPBOX_APP_KEY')
+        app_secret = current_app.config.get('DROPBOX_APP_SECRET')
+
+        if not all([refresh_token, app_key, app_secret]):
+            current_app.logger.warning("Dropbox não configurado: upload indisponível até que as credenciais ambientais sejam definidas.")
+            return None
+
+        return DropboxService(refresh_token=refresh_token, app_key=app_key, app_secret=app_secret)
+    except Exception as e:
+        current_app.logger.error(f"❌ Configuração do Dropbox ausente ou inválida: {e}")
+        return None
+
+
+def validar_imagem_upload(arq):
+    """Confere arquivo de imagem válido, real e dentro do limite aceitável."""
+    if not arq or not getattr(arq, 'filename', None):
+        return False, 'Arquivo inválido.'
+
+    tamanho = 0
+    try:
+        arq.seek(0, os.SEEK_END)
+        tamanho = arq.tell()
+        arq.seek(0)
+    except Exception:
+        tamanho = 0
+
+    if tamanho <= 0:
+        return False, 'Arquivo vazio.'
+    if tamanho > MAX_IMAGE_SIZE_BYTES:
+        return False, 'Arquivo excede o tamanho máximo permitido de 10 MB.'
+
+    _, ext = os.path.splitext(arq.filename.lower())
+    if ext not in EXTENSOES_VALIDAS:
+        return False, 'Formato de arquivo inválido.'
+
+    try:
+        arq.seek(0)
+        with Image.open(arq) as img:
+            img.verify()
+        arq.seek(0)
+        return True, None
+    except Exception:
+        return False, 'Arquivo não é uma imagem válida.'
 
 def normalizar(texto: str) -> str:
     """Remove acentos e caracteres especiais, convertendo para minúsculas."""
@@ -76,6 +113,10 @@ def upload_foto():
     if not campanha_cod or not campanha_nome or not arquivos or all(not a.filename for a in arquivos):
         return jsonify(success=False, mensagem="O código, o nome da campanha e ao menos uma imagem são obrigatórios."), 400
 
+    dropbox = get_dropbox_service()
+    if dropbox is None:
+        return jsonify(success=False, mensagem="Armazenamento externo indisponível. Configure as credenciais do Dropbox antes de continuar."), 503
+
     with get_db_connection() as conn:
         campanha = conn.execute(
             "SELECT id, cod, nome FROM campanhas WHERE cod = ? AND nome = ?", (campanha_cod, campanha_nome)
@@ -86,21 +127,20 @@ def upload_foto():
         
         campanha_id = campanha['id']
         slug_pasta = slug(campanha['nome'])
-        dropbox = get_dropbox_service()
         salvos, erros = [], []
 
         for arq in arquivos:
             fn_seguro = secure_filename(arq.filename)
             try:
-                _, ext = os.path.splitext(fn_seguro.lower())
-                if ext not in EXTENSOES_VALIDAS:
-                    erros.append(f"{fn_seguro}: Formato de arquivo inválido.")
+                valido, motivo = validar_imagem_upload(arq)
+                if not valido:
+                    erros.append(f"{fn_seguro}: {motivo}")
                     continue
 
+                _, ext = os.path.splitext(fn_seguro.lower())
                 nome_final = f"{slug(campanha['cod'])}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}{ext}"
                 remote_path = f"/{slug_pasta}/{nome_final}"
 
-                # ✅ CORREÇÃO: Lê o conteúdo do arquivo em bytes e o passa para o serviço.
                 file_content = arq.read()
                 dropbox.upload_file(file_content, remote_path)
 
@@ -131,24 +171,24 @@ def deletar_imagem():
 
     try:
         dropbox = get_dropbox_service()
+        if dropbox is None:
+            return jsonify(success=False, mensagem="Armazenamento externo indisponível. Configure as credenciais do Dropbox antes de continuar."), 503
+
         nome_arquivo = os.path.basename(imagem_path)
         path_lixeira = f"{PASTA_LIXEIRA}/{nome_arquivo}"
-        
-        # Move no Dropbox primeiro
+
         dropbox.move_file(imagem_path, path_lixeira)
 
-        # Atualiza o banco de dados
         with get_db_connection() as conn:
             cursor = conn.execute(
                 "UPDATE campanhas_imagens SET apagada = 1, imagem_path = ? WHERE imagem_path = ?",
                 (path_lixeira, imagem_path)
             )
-            # Se a atualização falhar no DB, desfaz a ação no Dropbox
             if cursor.rowcount == 0:
-                dropbox.move_file(path_lixeira, imagem_path) 
+                dropbox.move_file(path_lixeira, imagem_path)
                 return jsonify(success=False, mensagem="Erro: Imagem não encontrada no banco de dados."), 404
             conn.commit()
-        
+
         return jsonify(success=True, mensagem="Imagem movida para a lixeira.")
     except Exception as e:
         current_app.logger.error(f"Falha ao mover para lixeira: {e}")

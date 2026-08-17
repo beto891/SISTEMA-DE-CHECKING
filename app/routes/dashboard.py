@@ -6,13 +6,15 @@ import os
 from sqlalchemy import text
 
 dashboard_bp = Blueprint('dashboard', __name__)
-dropbox_service = DropboxService()
 
 def gerar_link_publico(path):
     try:
         if path.startswith("https://") or path.startswith("http://"):
             return path
-        return dropbox_service.create_shared_link(path)
+        service = DropboxService()
+        if service.dbx is None:
+            return path
+        return service.create_shared_link(path)
     except Exception as e:
         print(f"[Dropbox] Erro ao gerar link público para '{path}': {e}")
         return path  # fallback para o caminho original
